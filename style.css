@@ -1,0 +1,21 @@
+body {
+	padding: 20px;
+}
+
+button {
+	margin-top: 10px;
+	margin-right: 5px;
+}
+
+.progress {
+	margin-top: 10px;
+}
+
+progress {
+	width: 30%;
+}
+
+#download {
+	display: block;
+	margin-top: 10px;
+}

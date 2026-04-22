@@ -4,15 +4,35 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>P2P file transfering using webrtc</title>
+		<link rel="stylesheet" href="style.css" />
 	</head>
 	<body>
-		<h1>WebRTC P2P File Transfer</h1>
-		<input type="file" id="fileInput" />
-		<button id="sendBtn">Send File</button>
-		<div id="status"></div>
-		<div id="progress"></div>
-		<pre id="offerArea"></pre>
-		<pre id="answerArea"></pre>
+		<h1>Transfer file using webrtc.</h1>
+
+		<section>
+			<div>
+				<form>
+					<input type="file" id="fileInput" name="files" />
+				</form>
+				<button disabled id="sendFile">Send</button>
+				<button disabled id="abortBtn">Abort</button>
+			</div>
+
+			<div class="progress" id="sendWrapper">
+				<div class="label">Sending:</div>
+				<progress id="sendProgress" max="0" value="0"></progress>
+			</div>
+
+			<div class="progress" id="recvWrapper">
+				<div class="label">Receiving:</div>
+				<progress id="recvProgress" max="0" value="0"></progress>
+			</div>
+
+			<a id="download" style="display: none"></a>
+			<span id="span"></span>
+		</section>
+
+		<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
 		<script src="main.js"></script>
 	</body>
 </html>
