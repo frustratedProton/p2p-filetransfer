@@ -1,6 +1,6 @@
-import { WebSocket, WebSocketServer } from 'ws';
+import { WebSocketServer } from 'ws';
 
-const wss = new WebSocketServer({ port: 3000 });
+const wss = new WebSocketServer({ port: 3000, host: '0.0.0.0' });
 
 let clients = new Set();
 
