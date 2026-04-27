@@ -1,22 +1,25 @@
-import { useState } from "react"
-import FileInput from "./FileInput";
+import { useState } from 'react';
+import FileInput from './FileInput';
+import ProgressBar from './ProgressBar';
+import DownloadLink from './DownloadLink';
 
 const FileTransfer = () => {
-    const [file, setFile] = useState<File | null>(null);
-    const [sendProg, setSendProg] = useState<number>(0);
-    const [recvProg, setRecvProg] = useState<number>(0);
-    const [downloadURL, setDownloadURL] = useState<string | null>(null);
+	const [file, setFile] = useState<File | null>(null);
+	const [sendProg, setSendProg] = useState<number>(0);
+	const [recvProg, setRecvProg] = useState<number>(0);
+	const [downloadURL, setDownloadURL] = useState<string | null>(null);
 
-    return (
+	return (
 		<section>
-            <h3>File Transfer Component</h3>
+			<h3>File Transfer Component</h3>
 			<FileInput file={file} setFile={setFile} />
 
-			{/* <ProgressBar label="send" /> */}
-			{/* <ProgressBar label="recv" /> */}
-            {/* <DownloadLink url={downloadURL} /> */}
+			<ProgressBar label="Sending" value={sendProg} />
+			<ProgressBar label="Receiving" value={recvProg} />
+
+			<DownloadLink url={downloadURL} />
 		</section>
 	);
-}
+};
 
-export default FileTransfer
+export default FileTransfer;
