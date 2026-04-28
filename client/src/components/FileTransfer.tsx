@@ -2,22 +2,45 @@ import { useState } from 'react';
 import FileInput from './FileInput';
 import ProgressBar from './ProgressBar';
 import DownloadLink from './DownloadLink';
+import { useFileTransfer } from '../hooks/useFileTransfer';
 
 const FileTransfer = () => {
 	const [file, setFile] = useState<File | null>(null);
-	const [sendProg, setSendProg] = useState<number>(0);
-	const [recvProg, setRecvProg] = useState<number>(0);
-	const [downloadURL, setDownloadURL] = useState<string | null>(null);
+	const {
+		sendProg,
+		recvProg,
+		sendMax,
+		recvMax,
+		downloadURL,
+		downloadInfo,
+		isSending,
+		startSend,
+		abortSend,
+	} = useFileTransfer();
+
+	const handleSend = () => {
+		if (file) startSend(file);
+	};
 
 	return (
 		<section>
 			<h3>File Transfer Component</h3>
-			<FileInput file={file} setFile={setFile} />
+			<FileInput
+				file={file}
+				setFile={setFile}
+				onSend={handleSend}
+				onAbort={abortSend}
+				isSending={isSending}
+			/>
 
-			<ProgressBar label="Sending" value={sendProg} />
-			<ProgressBar label="Receiving" value={recvProg} />
+			{sendMax > 0 && (
+				<ProgressBar label="Sending" value={sendProg} max={sendMax} />
+			)}
+			{recvMax > 0 && (
+				<ProgressBar label="Receiving" value={recvProg} max={recvMax} />
+			)}
 
-			<DownloadLink url={downloadURL} />
+			<DownloadLink url={downloadURL} info={downloadInfo} />
 		</section>
 	);
 };

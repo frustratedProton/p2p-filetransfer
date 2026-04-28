@@ -1,25 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 type Props = {
 	file: File | null;
 	setFile: (file: File | null) => void;
+	onSend: () => void;
+	onAbort: () => void;
+	isSending: boolean;
 };
 
-const FileInput = ({ file, setFile }: Props) => {
+const FileInput = ({ file, setFile, onSend, onAbort, isSending }: Props) => {
 	const [dragActive, setDragActive] = useState<boolean>(false);
+	const inputRef = useRef<HTMLInputElement>(null);
 
 	const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
 		e.preventDefault();
+		e.stopPropagation();
+	};
+
+	const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setDragActive(true);
+	};
+
+	const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setDragActive(false);
 	};
 
 	const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
 		e.preventDefault();
-		setDragActive(true);
+		e.stopPropagation();
+		setDragActive(false);
 
 		const files = e.dataTransfer.files;
 
 		if (files.length > 1) {
-			alert('only one file allowed');
+			alert('Only one file allowed');
 			return;
 		}
 
@@ -35,24 +53,37 @@ const FileInput = ({ file, setFile }: Props) => {
 		setFile(selectedFile);
 	};
 
+	const handleOpenDialog = () => {
+		inputRef.current?.click();
+	};
+
 	return (
 		<div
 			className={`drop-zone ${dragActive ? 'active' : ''}`}
 			onDragOver={handleDragOver}
-			onDragEnter={() => setDragActive(true)}
-			onDragLeave={() => setDragActive(false)}
+			onDragEnter={handleDragEnter}
+			onDragLeave={handleDragLeave}
 			onDrop={handleDrop}
 		>
-			<input type="file" onChange={handleChange} />
+			<input
+				type="file"
+				ref={inputRef}
+				onChange={handleChange}
+				style={{ display: 'none' }}
+			/>
 
-			<p>
+			<p onClick={handleOpenDialog} style={{ cursor: 'pointer' }}>
 				{file
 					? `Selected: ${file.name}`
 					: 'Drag & drop a file here or click to select'}
 			</p>
 
-			<button disabled={!file}>Send</button>
-			<button>Abort</button>
+			<button disabled={!file || isSending} onClick={onSend}>
+				Send
+			</button>
+			<button disabled={!isSending} onClick={onAbort}>
+				Abort
+			</button>
 		</div>
 	);
 };
