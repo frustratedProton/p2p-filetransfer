@@ -5,7 +5,9 @@
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-        "dev" : "node server.js"
+		"dev": "tsx watch server.ts",
+		"start": "tsx server.ts",
+		"devjs": "node server.js"
 	},
 	"keywords": [],
 	"author": "",
@@ -13,5 +15,11 @@
 	"type": "module",
 	"dependencies": {
 		"ws": "^8.20.0"
+	},
+	"devDependencies": {
+		"@types/node": "^25.6.0",
+		"@types/ws": "^8.18.1",
+		"tsx": "^4.21.0",
+		"typescript": "^6.0.3"
 	}
 }

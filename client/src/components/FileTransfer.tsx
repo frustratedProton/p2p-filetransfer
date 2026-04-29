@@ -4,7 +4,11 @@ import ProgressBar from './ProgressBar';
 import DownloadLink from './DownloadLink';
 import { useFileTransfer } from '../hooks/useFileTransfer';
 
-const FileTransfer = () => {
+type Props = {
+	roomId: string;
+};
+
+const FileTransfer = ({ roomId }: Props) => {
 	const [file, setFile] = useState<File | null>(null);
 	const {
 		sendProg,
@@ -16,7 +20,7 @@ const FileTransfer = () => {
 		isSending,
 		startSend,
 		abortSend,
-	} = useFileTransfer();
+	} = useFileTransfer(roomId);
 
 	const handleSend = () => {
 		if (file) startSend(file);

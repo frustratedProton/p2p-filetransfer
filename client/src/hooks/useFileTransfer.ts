@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 
-type Metadata = { name: string; size: number };
-
-export const useFileTransfer = () => {
+export const useFileTransfer = (roomId: string) => {
 	const [sendProg, setSendProg] = useState<number>(0);
 	const [recvProg, setRecvProg] = useState<number>(0);
 	const [sendMax, setSendMax] = useState<number>(0);
 	const [recvMax, setRecvMax] = useState<number>(0);
 	const [downloadURL, setDownloadURL] = useState<string | null>(null);
-	const [downloadInfo, setDownloadInfo] = useState<Metadata | null>(null);
+	const [downloadInfo, setDownloadInfo] = useState<{
+		name: string;
+		size: number;
+	} | null>(null);
 	const [isSending, setIsSending] = useState<boolean>(false);
 
 	const pc = useRef<RTCPeerConnection | null>(null);
@@ -19,9 +20,27 @@ export const useFileTransfer = () => {
 
 	const recvBuffer = useRef<ArrayBuffer[]>([]);
 	const recvSize = useRef<number>(0);
-	const incomingFileInfo = useRef<Metadata | null>(null);
+	const incomingFileInfo = useRef<{ name: string; size: number } | null>(
+		null,
+	);
 	const isOfferer = useRef<boolean>(false);
 	const currentFile = useRef<File | null>(null);
+
+	const cleanupConnection = () => {
+		if (pc.current) {
+			pc.current.close();
+			pc.current = null;
+		}
+		if (sendChannel.current) {
+			sendChannel.current.close();
+			sendChannel.current = null;
+		}
+		if (recvChannel.current) {
+			recvChannel.current.close();
+			recvChannel.current = null;
+		}
+		setIsSending(false);
+	};
 
 	const onReceiveMessage = (event: MessageEvent) => {
 		if (typeof event.data === 'string') {
@@ -53,10 +72,10 @@ export const useFileTransfer = () => {
 
 	const readSlice = (o: number) => {
 		const file = currentFile.current;
-		if (!file) return;
+		if (!file || !fileReader.current) return;
 		const chunkSize = 16384;
 		const slice = file.slice(o, o + chunkSize);
-		fileReader.current?.readAsArrayBuffer(slice);
+		fileReader.current.readAsArrayBuffer(slice);
 	};
 
 	const sendData = () => {
@@ -102,7 +121,9 @@ export const useFileTransfer = () => {
 	};
 
 	const createConnection = async () => {
+		cleanupConnection();
 		setIsSending(true);
+
 		pc.current = new RTCPeerConnection();
 
 		pc.current.onicecandidate = (event) => {
@@ -120,6 +141,10 @@ export const useFileTransfer = () => {
 			sendChannel.current =
 				pc.current.createDataChannel('sendDataChannel');
 			setupSendChannel();
+
+			const offer = await pc.current.createOffer();
+			await pc.current.setLocalDescription(offer);
+			socket.current?.send(JSON.stringify({ type: 'offer', offer }));
 		} else {
 			pc.current.ondatachannel = (event) => {
 				recvChannel.current = event.channel;
@@ -127,27 +152,32 @@ export const useFileTransfer = () => {
 				recvChannel.current.onmessage = onReceiveMessage;
 			};
 		}
-
-		if (isOfferer.current) {
-			const offer = await pc.current.createOffer();
-			await pc.current.setLocalDescription(offer);
-			socket.current?.send(JSON.stringify({ type: 'offer', offer }));
-		}
 	};
 
 	useEffect(() => {
 		socket.current = new WebSocket('ws://localhost:3000');
 
+		socket.current.onopen = () => {
+			socket.current?.send(
+				JSON.stringify({ type: 'join', room: roomId }),
+			);
+		};
+
 		socket.current.onmessage = async (event) => {
 			const data = JSON.parse(event.data);
 
+			if (data.type === 'leave') {
+				cleanupConnection();
+				return;
+			}
+
 			if (data.type === 'offer') {
 				isOfferer.current = false;
-				if (!pc.current) await createConnection();
-				await pc.current.setRemoteDescription(data.offer);
+				await createConnection();
 
-				const answer = await pc.current.createAnswer();
-				await pc.current.setLocalDescription(answer);
+				await pc.current?.setRemoteDescription(data.offer);
+				const answer = await pc.current!.createAnswer();
+				await pc.current!.setLocalDescription(answer);
 				socket.current?.send(
 					JSON.stringify({ type: 'answer', answer }),
 				);
@@ -171,21 +201,25 @@ export const useFileTransfer = () => {
 
 		return () => {
 			socket.current?.close();
-			pc.current?.close();
+			cleanupConnection();
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [roomId]);
 
 	const startSend = (file: File) => {
 		currentFile.current = file;
 		isOfferer.current = true;
+		setSendProg(0);
+		setRecvProg(0);
+		setDownloadURL(null);
+		setDownloadInfo(null);
 		createConnection();
 	};
 
 	const abortSend = () => {
 		if (fileReader.current && fileReader.current.readyState === 1) {
 			fileReader.current.abort();
-			setIsSending(false);
+			cleanupConnection();
 		}
 	};
 
