@@ -11,6 +11,7 @@ export const useFileTransfer = (roomId: string) => {
 		size: number;
 	} | null>(null);
 	const [isSending, setIsSending] = useState<boolean>(false);
+	const [isReceiving, setIsReceiving] = useState<boolean>(false);
 
 	const pc = useRef<RTCPeerConnection | null>(null);
 	const sendChannel = useRef<RTCDataChannel | null>(null);
@@ -43,6 +44,8 @@ export const useFileTransfer = (roomId: string) => {
 	};
 
 	const onReceiveMessage = (event: MessageEvent) => {
+		setIsReceiving(true);
+
 		if (typeof event.data === 'string') {
 			const data = JSON.parse(event.data);
 			if (data.type === 'metadata') {
@@ -67,6 +70,8 @@ export const useFileTransfer = (roomId: string) => {
 			const url = URL.createObjectURL(blob);
 			setDownloadURL(url);
 			setDownloadInfo(incomingFileInfo.current);
+
+			setTimeout(() => setIsReceiving(false), 500);
 		}
 	};
 
@@ -197,6 +202,16 @@ export const useFileTransfer = (roomId: string) => {
 					);
 				}
 			}
+
+			if (data.type === 'signal-abort') {
+				cleanupConnection();
+				setRecvProg(0);
+				setRecvMax(0);
+				setIsReceiving(false);
+				setDownloadURL(null);
+				setDownloadInfo(null);
+				return;
+			}
 		};
 
 		return () => {
@@ -209,6 +224,8 @@ export const useFileTransfer = (roomId: string) => {
 	const startSend = (file: File) => {
 		currentFile.current = file;
 		isOfferer.current = true;
+		setIsSending(true);
+		setIsReceiving(false);
 		setSendProg(0);
 		setRecvProg(0);
 		setDownloadURL(null);
@@ -219,8 +236,12 @@ export const useFileTransfer = (roomId: string) => {
 	const abortSend = () => {
 		if (fileReader.current && fileReader.current.readyState === 1) {
 			fileReader.current.abort();
-			cleanupConnection();
 		}
+		socket.current?.send(JSON.stringify({ type: 'abort-signal' }));
+		cleanupConnection();
+		setSendProg(0);
+		setSendMax(0);
+		setIsSending(false);
 	};
 
 	return {
@@ -232,6 +253,7 @@ export const useFileTransfer = (roomId: string) => {
 		downloadInfo,
 		isSending,
 		startSend,
+		isReceiving,
 		abortSend,
 	};
 };

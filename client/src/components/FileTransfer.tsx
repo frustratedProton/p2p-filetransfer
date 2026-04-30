@@ -18,6 +18,7 @@ const FileTransfer = ({ roomId }: Props) => {
 		downloadURL,
 		downloadInfo,
 		isSending,
+		isReceiving,
 		startSend,
 		abortSend,
 	} = useFileTransfer(roomId);
@@ -27,20 +28,19 @@ const FileTransfer = ({ roomId }: Props) => {
 	};
 
 	return (
-		<section>
-			<h3>File Transfer Component</h3>
+		<section className="w-full max-w-xl mx-auto mt-8 flex flex-col gap-4">
 			<FileInput
 				file={file}
 				setFile={setFile}
 				onSend={handleSend}
 				onAbort={abortSend}
-				isSending={isSending}
+				isSending={isSending || isReceiving}
 			/>
 
-			{sendMax > 0 && (
+			{sendMax > 0 && !isReceiving && (
 				<ProgressBar label="Sending" value={sendProg} max={sendMax} />
 			)}
-			{recvMax > 0 && (
+			{recvMax > 0 && isReceiving && (
 				<ProgressBar label="Receiving" value={recvProg} max={recvMax} />
 			)}
 
