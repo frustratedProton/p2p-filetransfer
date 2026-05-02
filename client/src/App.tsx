@@ -1,15 +1,24 @@
 import { useState } from 'react';
 import FileTransfer from './components/FileTransfer';
 
-if (!window.location.hash) {
-	const newRoomId = Math.random().toString(36).substring(2, 8);
-	window.location.hash = newRoomId;
-}
-
-const roomId = window.location.hash.replace('#', '');
+const initialRoomId = window.location.hash
+	? window.location.hash.slice(1)
+	: null;
 
 function App() {
+	const [roomId, setRoomId] = useState<string | null>(initialRoomId);
 	const [copied, setCopied] = useState(false);
+
+	const handleRoomCreated = (newRoomId: string) => {
+		window.history.pushState({}, '', `#${newRoomId}`);
+		setRoomId(newRoomId);
+	};
+
+	const handleCancel = () => {
+		window.history.pushState({}, '', '/');
+		setRoomId(null);
+		window.location.reload();
+	};
 
 	const copyLink = () => {
 		navigator.clipboard.writeText(window.location.href);
@@ -25,27 +34,32 @@ function App() {
 						P2P File Transfer
 					</h1>
 
-					<div className="mt-3 flex items-center justify-center gap-2 text-sm text-slate-500">
-						<span>
-							Room:{' '}
-							<span className="font-mono font-semibold text-slate-700 bg-slate-200 px-1.5 py-0.5 rounded">
+					{roomId && (
+						<div className="mt-4 flex items-center justify-center gap-3 text-sm">
+							<code className="font-mono bg-slate-200 px-3 py-1.5 rounded-lg">
 								{roomId}
-							</span>
-						</span>
-						<span className="text-slate-300">|</span>
-						<button
-							onClick={copyLink}
-							className={`font-medium transition-colors ${
-								copied
-									? 'text-green-600'
-									: 'text-blue-600 hover:text-blue-800 underline underline-offset-2'
-							}`}
-						>
-							{copied ? '✓ Copied!' : 'Copy Link'}
-						</button>
-					</div>
+							</code>
+							<button
+								onClick={copyLink}
+								className="font-medium text-blue-600 hover:underline"
+							>
+								{copied ? 'Copied!' : 'Copy Link'}
+							</button>
+							<button
+								onClick={handleCancel}
+								className="text-red-600 hover:underline text-sm"
+							>
+								Cancel
+							</button>
+						</div>
+					)}
 				</div>
-				<FileTransfer roomId={roomId} />
+
+				<FileTransfer
+					roomId={roomId}
+					onRoomCreated={handleRoomCreated}
+					onCancel={handleCancel}
+				/>
 			</div>
 		</div>
 	);

@@ -38,6 +38,13 @@ wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 			}
 			rooms.get(roomId)!.add(ws);
 
+			const joinMsg = JSON.stringify({ type: 'peer-joined' });
+			for (const client of rooms.get(roomId)!) {
+				if (client !== ws && client.readyState === WebSocket.OPEN) {
+					client.send(joinMsg);
+				}
+			}
+
 			console.log(
 				`client joined room: ${roomId} (Total: ${rooms.get(roomId)!.size})`,
 			);
@@ -65,11 +72,11 @@ wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 			roomClients?.delete(ws);
 
 			const leaveMsg = JSON.stringify({ type: 'leave' });
-            for (const client of roomClients) {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(leaveMsg);
-                }
-            }
+			for (const client of roomClients) {
+				if (client.readyState === WebSocket.OPEN) {
+					client.send(leaveMsg);
+				}
+			}
 
 			if (roomClients.size === 0) {
 				rooms.delete(ws.roomId);

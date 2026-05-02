@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-export const useFileTransfer = (roomId: string) => {
+export const useFileTransfer = (roomId: string | null) => {
 	const [sendProg, setSendProg] = useState<number>(0);
 	const [recvProg, setRecvProg] = useState<number>(0);
 	const [sendMax, setSendMax] = useState<number>(0);
@@ -26,6 +26,12 @@ export const useFileTransfer = (roomId: string) => {
 	);
 	const isOfferer = useRef<boolean>(false);
 	const currentFile = useRef<File | null>(null);
+
+	const roomIdRef = useRef(roomId);
+
+	useEffect(() => {
+		roomIdRef.current = roomId;
+	}, [roomId]);
 
 	const cleanupConnection = () => {
 		if (pc.current) {
@@ -163,16 +169,35 @@ export const useFileTransfer = (roomId: string) => {
 		socket.current = new WebSocket('ws://localhost:3000');
 
 		socket.current.onopen = () => {
-			socket.current?.send(
-				JSON.stringify({ type: 'join', room: roomId }),
-			);
+			if (roomIdRef.current) {
+				socket.current?.send(
+					JSON.stringify({ type: 'join', room: roomIdRef.current }),
+				);
+			}
 		};
 
 		socket.current.onmessage = async (event) => {
 			const data = JSON.parse(event.data);
 
+			if (data.type === 'peer-joined') {
+				if (isOfferer.current) {
+					createConnection();
+				}
+				return;
+			}
+
 			if (data.type === 'leave') {
 				cleanupConnection();
+				return;
+			}
+
+			if (data.type === 'signal-abort') {
+				cleanupConnection();
+				setRecvProg(0);
+				setRecvMax(0);
+				setIsReceiving(false);
+				setDownloadURL(null);
+				setDownloadInfo(null);
 				return;
 			}
 
@@ -202,16 +227,6 @@ export const useFileTransfer = (roomId: string) => {
 					);
 				}
 			}
-
-			if (data.type === 'signal-abort') {
-				cleanupConnection();
-				setRecvProg(0);
-				setRecvMax(0);
-				setIsReceiving(false);
-				setDownloadURL(null);
-				setDownloadInfo(null);
-				return;
-			}
 		};
 
 		return () => {
@@ -219,25 +234,35 @@ export const useFileTransfer = (roomId: string) => {
 			cleanupConnection();
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	useEffect(() => {
+		if (roomId && socket.current?.readyState === WebSocket.OPEN) {
+			socket.current.send(JSON.stringify({ type: 'join', room: roomId }));
+		}
 	}, [roomId]);
 
-	const startSend = (file: File) => {
+	const startSend = (file: File, targetRoomId: string) => {
 		currentFile.current = file;
 		isOfferer.current = true;
-		setIsSending(true);
-		setIsReceiving(false);
+
 		setSendProg(0);
 		setRecvProg(0);
 		setDownloadURL(null);
 		setDownloadInfo(null);
-		createConnection();
+
+		if (socket.current?.readyState === WebSocket.OPEN) {
+			socket.current.send(
+				JSON.stringify({ type: 'join', room: targetRoomId }),
+			);
+		}
 	};
 
 	const abortSend = () => {
 		if (fileReader.current && fileReader.current.readyState === 1) {
 			fileReader.current.abort();
 		}
-		socket.current?.send(JSON.stringify({ type: 'abort-signal' }));
+		socket.current?.send(JSON.stringify({ type: 'signal-abort' }));
 		cleanupConnection();
 		setSendProg(0);
 		setSendMax(0);
@@ -252,8 +277,8 @@ export const useFileTransfer = (roomId: string) => {
 		downloadURL,
 		downloadInfo,
 		isSending,
-		startSend,
 		isReceiving,
+		startSend,
 		abortSend,
 	};
 };
