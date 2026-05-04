@@ -24,6 +24,10 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		isSending,
 		isReceiving,
 		startSend,
+		sendSpeed,
+		recvSpeed,
+		sendETA,
+		recvETA,
 	} = useFileTransfer(roomId);
 
 	const handleShare = () => {
@@ -85,10 +89,23 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 				)}
 
 			{sendMax > 0 && !isReceiving && (
-				<ProgressBar label="Sending" value={sendProg} max={sendMax} />
+				<ProgressBar
+					label="Sending"
+					value={sendProg}
+					max={sendMax}
+					speed={sendSpeed}
+					eta={sendETA}
+				/>
 			)}
+
 			{recvMax > 0 && isReceiving && (
-				<ProgressBar label="Receiving" value={recvProg} max={recvMax} />
+				<ProgressBar
+					label="Receiving"
+					value={recvProg}
+					max={recvMax}
+					speed={recvSpeed}
+					eta={recvETA}
+				/>
 			)}
 
 			<DownloadLink url={downloadURL} info={downloadInfo} />

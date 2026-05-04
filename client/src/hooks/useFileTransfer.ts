@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 
 const CHUNK_SIZE = 16384;
+const HIGH_WATER_MARK = 5 * 1024 * 1024;
+const LOW_WATER_MARK = 1 * 1024 * 1024;
+
+// AM I GETTING TOO DEEP THIS FILE????????????????
 
 export const useFileTransfer = (roomId: string | null) => {
 	const [sendProg, setSendProg] = useState<number>(0);
@@ -14,6 +18,10 @@ export const useFileTransfer = (roomId: string | null) => {
 	} | null>(null);
 	const [isSending, setIsSending] = useState<boolean>(false);
 	const [isReceiving, setIsReceiving] = useState<boolean>(false);
+	const [sendSpeed, setSendSpeed] = useState<number>(0);
+	const [recvSpeed, setRecvSpeed] = useState<number>(0);
+	const [sendETA, setSendETA] = useState<number | null>(null);
+	const [recvETA, setRecvETA] = useState<number | null>(null);
 
 	const pc = useRef<RTCPeerConnection | null>(null);
 	const sendChannel = useRef<RTCDataChannel | null>(null);
@@ -26,16 +34,31 @@ export const useFileTransfer = (roomId: string | null) => {
 	const incomingFileInfo = useRef<{ name: string; size: number } | null>(
 		null,
 	);
+
+	const sendStartTime = useRef<number | null>(null);
+	const recvStartTime = useRef<number | null>(null);
+
+	const sendProgRef = useRef(0);
+	const recvProgRef = useRef(0);
+	const sendMaxRef = useRef(0);
+	const recvMaxRef = useRef(0);
+
 	const isOfferer = useRef<boolean>(false);
 	const currentFile = useRef<File | null>(null);
+	const offset = useRef<number>(0);
 
 	const roomIdRef = useRef(roomId);
-
-	const offset = useRef<number>(0);
 
 	useEffect(() => {
 		roomIdRef.current = roomId;
 	}, [roomId]);
+
+	useEffect(() => {
+		sendProgRef.current = sendProg;
+		recvProgRef.current = recvProg;
+		sendMaxRef.current = sendMax;
+		recvMaxRef.current = recvMax;
+	}, [sendProg, recvProg, sendMax, recvMax]);
 
 	const cleanupConnection = () => {
 		if (pc.current) {
@@ -50,11 +73,23 @@ export const useFileTransfer = (roomId: string | null) => {
 			recvChannel.current.close();
 			recvChannel.current = null;
 		}
+
+		sendStartTime.current = null;
+		recvStartTime.current = null;
+		setSendSpeed(0);
+		setRecvSpeed(0);
+		setSendETA(null);
+		setRecvETA(null);
+
 		setIsSending(false);
 	};
 
 	const onReceiveMessage = (event: MessageEvent) => {
 		setIsReceiving(true);
+
+		if (!recvStartTime.current) {
+			recvStartTime.current = Date.now();
+		}
 
 		if (typeof event.data === 'string') {
 			const data = JSON.parse(event.data);
@@ -95,6 +130,8 @@ export const useFileTransfer = (roomId: string | null) => {
 	};
 
 	const sendData = () => {
+		sendStartTime.current = Date.now();
+
 		const file = currentFile.current;
 		if (!file || !sendChannel.current) return;
 
@@ -120,7 +157,7 @@ export const useFileTransfer = (roomId: string | null) => {
 			offset.current += (result as ArrayBuffer).byteLength;
 			setSendProg(offset.current);
 
-			if (sendChannel.current.bufferedAmount > 5 * 1024 * 1024) {
+			if (sendChannel.current.bufferedAmount > HIGH_WATER_MARK) {
 				return;
 			}
 
@@ -137,7 +174,7 @@ export const useFileTransfer = (roomId: string | null) => {
 		if (!sendChannel.current) return;
 		sendChannel.current.binaryType = 'arraybuffer';
 
-		sendChannel.current.bufferedAmountLowThreshold = 1 * 1024 * 1024;
+		sendChannel.current.bufferedAmountLowThreshold = LOW_WATER_MARK;
 
 		sendChannel.current.onbufferedamountlow = () => {
 			readSlice();
@@ -253,6 +290,38 @@ export const useFileTransfer = (roomId: string | null) => {
 	}, []);
 
 	useEffect(() => {
+		const interval = setInterval(() => {
+			// SEND
+			if (sendStartTime.current && sendProgRef.current > 0) {
+				const elapsed = (Date.now() - sendStartTime.current) / 1000;
+				const speed = sendProgRef.current / elapsed;
+
+				setSendSpeed(speed);
+
+				if (sendMaxRef.current > 0 && speed > 0) {
+					const remaining = sendMaxRef.current - sendProgRef.current;
+					setSendETA(remaining / speed);
+				}
+			}
+
+			// RECEIVE
+			if (recvStartTime.current && recvProgRef.current > 0) {
+				const elapsed = (Date.now() - recvStartTime.current) / 1000;
+				const speed = recvProgRef.current / elapsed;
+
+				setRecvSpeed(speed);
+
+				if (recvMaxRef.current > 0 && speed > 0) {
+					const remaining = recvMaxRef.current - recvProgRef.current;
+					setRecvETA(remaining / speed);
+				}
+			}
+		}, 500);
+
+		return () => clearInterval(interval);
+	}, []);
+
+	useEffect(() => {
 		if (roomId && socket.current?.readyState === WebSocket.OPEN) {
 			socket.current.send(JSON.stringify({ type: 'join', room: roomId }));
 		}
@@ -296,5 +365,9 @@ export const useFileTransfer = (roomId: string | null) => {
 		isReceiving,
 		startSend,
 		abortSend,
+		sendSpeed,
+		recvSpeed,
+		sendETA,
+		recvETA,
 	};
 };
