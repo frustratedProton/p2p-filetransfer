@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 
+const CHUNK_SIZE = 16384;
+
 export const useFileTransfer = (roomId: string | null) => {
 	const [sendProg, setSendProg] = useState<number>(0);
 	const [recvProg, setRecvProg] = useState<number>(0);
@@ -28,6 +30,8 @@ export const useFileTransfer = (roomId: string | null) => {
 	const currentFile = useRef<File | null>(null);
 
 	const roomIdRef = useRef(roomId);
+
+	const offset = useRef<number>(0);
 
 	useEffect(() => {
 		roomIdRef.current = roomId;
@@ -81,11 +85,12 @@ export const useFileTransfer = (roomId: string | null) => {
 		}
 	};
 
-	const readSlice = (o: number) => {
+	const readSlice = () => {
 		const file = currentFile.current;
 		if (!file || !fileReader.current) return;
-		const chunkSize = 16384;
-		const slice = file.slice(o, o + chunkSize);
+		if (offset.current >= file.size) return;
+
+		const slice = file.slice(offset.current, offset.current + CHUNK_SIZE);
 		fileReader.current.readAsArrayBuffer(slice);
 	};
 
@@ -105,28 +110,39 @@ export const useFileTransfer = (roomId: string | null) => {
 		);
 
 		fileReader.current = new FileReader();
-		let offset = 0;
+		offset.current = 0;
 
 		fileReader.current.onload = (e) => {
 			const result = e.target?.result;
 			if (!result || !sendChannel.current) return;
 
 			sendChannel.current.send(result as ArrayBuffer);
-			offset += (result as ArrayBuffer).byteLength;
-			setSendProg(offset);
+			offset.current += (result as ArrayBuffer).byteLength;
+			setSendProg(offset.current);
 
-			if (offset < file.size) {
-				readSlice(offset);
+			if (sendChannel.current.bufferedAmount > 5 * 1024 * 1024) {
+				return;
+			}
+
+			if (offset.current < file.size) {
+				readSlice();
 			}
 		};
 
 		fileReader.current.onerror = console.error;
-		readSlice(0);
+		readSlice();
 	};
 
 	const setupSendChannel = () => {
 		if (!sendChannel.current) return;
 		sendChannel.current.binaryType = 'arraybuffer';
+
+		sendChannel.current.bufferedAmountLowThreshold = 1 * 1024 * 1024;
+
+		sendChannel.current.onbufferedamountlow = () => {
+			readSlice();
+		};
+
 		sendChannel.current.onopen = () => sendData();
 		sendChannel.current.onerror = (e) => console.error(e);
 	};
