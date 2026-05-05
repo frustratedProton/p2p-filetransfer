@@ -8,7 +8,7 @@ type SignalingMessage = {
 	candidate?: RTCIceCandidateInit;
 };
 
-const wss = new WebSocketServer({ port: 3000, host: '0.0.0.0' });
+const wss = new WebSocketServer({ port: 3000 });
 
 const rooms = new Map<string, Set<WebSocket>>();
 

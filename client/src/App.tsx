@@ -15,9 +15,8 @@ function App() {
 	};
 
 	const handleCancel = () => {
-		window.history.pushState({}, '', '/');
+		window.history.pushState({}, '', window.location.pathname);
 		setRoomId(null);
-		window.location.reload();
 	};
 
 	const copyLink = () => {
@@ -41,15 +40,13 @@ function App() {
 							</code>
 							<button
 								onClick={copyLink}
-								className="font-medium text-blue-600 hover:underline"
+								className={`font-medium transition-colors ${
+									copied
+										? 'text-green-600'
+										: 'text-blue-600 hover:underline'
+								}`}
 							>
-								{copied ? 'Copied!' : 'Copy Link'}
-							</button>
-							<button
-								onClick={handleCancel}
-								className="text-red-600 hover:underline text-sm"
-							>
-								Cancel
+								{copied ? '✓ Copied!' : 'Copy Link'}
 							</button>
 						</div>
 					)}
