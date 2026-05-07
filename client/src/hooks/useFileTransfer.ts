@@ -200,7 +200,7 @@ export const useFileTransfer = (roomId: string | null) => {
 		sendChannel.current.send(
 			JSON.stringify({
 				type: 'metadata',
-				name: file.name,
+				name: file.webkitRelativePath || file.name,
 				size: file.size,
 			}),
 		);

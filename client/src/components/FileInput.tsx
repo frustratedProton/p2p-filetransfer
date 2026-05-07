@@ -7,6 +7,28 @@ type Props = {
 	isWaiting: boolean;
 };
 
+// is this really am i supposed to be doing this
+type FileSystemEntry = {
+	isFile: boolean;
+	isDirectory: boolean;
+	name: string;
+	fullPath: string;
+};
+
+type FileSystemFileEntry = FileSystemEntry & {
+	file: (callback: (file: File) => void) => void;
+};
+
+type FileSystemDirectoryEntry = FileSystemEntry & {
+	createReader: () => {
+		readEntries: (callback: (entries: FileSystemEntry[]) => void) => void;
+	};
+};
+
+type DataTransferItemWithEntry = DataTransferItem & {
+	webkitGetAsEntry?: () => FileSystemEntry | null;
+};
+
 const formatFileSize = (bytes: number) => {
 	if (bytes === 0) return '0 Bytes';
 	const k = 1024;
@@ -16,8 +38,10 @@ const formatFileSize = (bytes: number) => {
 };
 
 const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
-	const [dragActive, setDragActive] = useState<boolean>(false);
-	const inputRef = useRef<HTMLInputElement>(null);
+	const [dragActive, setDragActive] = useState(false);
+
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const folderInputRef = useRef<HTMLInputElement>(null);
 
 	const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
 		e.preventDefault();
@@ -36,24 +60,59 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 		setDragActive(false);
 	};
 
-	const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+	const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
 		e.preventDefault();
 		e.stopPropagation();
 		setDragActive(false);
 
-		const droppedFiles = Array.from(e.dataTransfer.files);
-		if (droppedFiles.length > 0) {
-			setFiles(droppedFiles);
+		const items = e.dataTransfer.items;
+		const collectedFiles: File[] = [];
+
+		const traverseEntry = (entry: FileSystemEntry) => {
+			if (entry.isFile) {
+				const fileEntry = entry as FileSystemFileEntry;
+				fileEntry.file((file: File) => {
+					if (file.size > 0) {
+						collectedFiles.push(file);
+					}
+				});
+			} else if (entry.isDirectory) {
+				const dirEntry = entry as FileSystemDirectoryEntry;
+				const reader = dirEntry.createReader();
+				reader.readEntries((entries: FileSystemEntry[]) => {
+					entries.forEach(traverseEntry);
+				});
+			}
+		};
+
+		for (let i = 0; i < items.length; i++) {
+			const item = items[i] as DataTransferItemWithEntry;
+			const entry = item.webkitGetAsEntry?.();
+
+			if (entry) {
+				traverseEntry(entry);
+			}
 		}
+
+		setTimeout(() => {
+			if (collectedFiles.length > 0) {
+				setFiles(collectedFiles);
+			}
+		}, 200);
 	};
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
+
 		setFiles(selectedFiles);
 	};
 
-	const handleOpenDialog = () => {
-		inputRef.current?.click();
+	const openFilePicker = () => {
+		fileInputRef.current?.click();
+	};
+
+	const openFolderPicker = () => {
+		folderInputRef.current?.click();
 	};
 
 	return (
@@ -72,16 +131,22 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 		>
 			<input
 				type="file"
-				ref={inputRef}
+				ref={fileInputRef}
 				onChange={handleChange}
 				className="hidden"
 				multiple
 			/>
 
-			<div
-				className="flex flex-col items-center gap-3 cursor-pointer"
-				onClick={handleOpenDialog}
-			>
+			<input
+				type="file"
+				ref={folderInputRef}
+				onChange={handleChange}
+				className="hidden"
+				multiple
+				webkitdirectory=""
+			/>
+
+			<div className="flex flex-col items-center gap-3">
 				<svg
 					className={`w-10 h-10 transition-colors duration-300 ${
 						dragActive ? 'text-blue-500' : 'text-gray-400'
@@ -89,7 +154,6 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
-					xmlns="http://www.w3.org/2000/svg"
 				>
 					<path
 						strokeLinecap="round"
@@ -107,26 +171,37 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 						<p className="mt-1 text-xs text-gray-500">
 							{formatFileSize(
 								files.reduce((acc, f) => acc + f.size, 0),
-							)}
+							)}{' '}
 							total
 						</p>
 					</div>
 				) : (
-					<p className="text-sm text-gray-500">
-						Drag & drop a files/folders here, or{' '}
-						<span className="font-medium text-blue-600 underline">
-							browse
-						</span>
+					<p className="text-sm text-gray-500 text-center">
+						Drag & drop files or folders here
 					</p>
 				)}
+
+				<div className="flex gap-4 mt-2">
+					<button
+						type="button"
+						onClick={openFilePicker}
+						className="text-blue-600 underline"
+					>
+						Browse Files
+					</button>
+					<button
+						type="button"
+						onClick={openFolderPicker}
+						className="text-blue-600 underline"
+					>
+						Browse Folder
+					</button>
+				</div>
 			</div>
 
 			{files.length > 0 && !isWaiting && (
 				<button
-					onClick={(e) => {
-						e.stopPropagation();
-						onShare();
-					}}
+					onClick={onShare}
 					className="mt-6 px-6 py-2.5 text-sm font-medium
                     text-white bg-blue-600 rounded-lg shadow-sm
                     transition-colors hover:bg-blue-700 focus:outline-none
