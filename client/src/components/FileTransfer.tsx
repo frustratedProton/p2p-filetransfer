@@ -11,7 +11,7 @@ type Props = {
 };
 
 const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
-	const [file, setFile] = useState<File | null>(null);
+	const [files, setFiles] = useState<File[]>([]);
 
 	const {
 		status,
@@ -19,8 +19,10 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		recvProg,
 		sendMax,
 		recvMax,
-		downloadURL,
-		downloadInfo,
+		// downloadURL,
+		// downloadInfo,
+		completedFiles,
+		totalFiles,
 		startSend,
 		resetTransfer,
 		clearStatus,
@@ -31,30 +33,34 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 	} = useFileTransfer(roomId);
 
 	const handleShare = () => {
-		if (!file) return;
+		if (files.length === 0) return;
 		const newRoomId = Math.random().toString(36).substring(2, 8);
 		onRoomCreated(newRoomId);
-		startSend(file, newRoomId);
+		startSend(files, newRoomId); // ✅ pass full array
 	};
 
 	const handleCancel = () => {
 		resetTransfer();
 		setTimeout(() => {
 			clearStatus();
-			setFile(null);
+			setFiles([]);
 			onCancel();
 		}, 1500);
 	};
 
 	const handleResetFromPeer = () => {
 		clearStatus();
-		setFile(null);
+		setFiles([]);
 		onCancel();
 	};
 
+	const currentFileIndex =
+		status === 'sending' || status === 'receiving'
+			? completedFiles.length + 1
+			: completedFiles.length;
+
 	return (
 		<section className="w-full max-w-xl mx-auto mt-8 flex flex-col gap-4">
-
 			{status === 'cancelled' && (
 				<div className="text-center p-8 bg-red-50 border-2 border-red-200 rounded-xl animate-pulse">
 					<p className="text-lg font-semibold text-red-700">
@@ -83,8 +89,8 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 
 			{status === 'idle' && !roomId && (
 				<FileInput
-					file={file}
-					setFile={setFile}
+					files={files}
+					setFiles={setFiles}
 					onShare={handleShare}
 					isWaiting={false}
 				/>
@@ -115,50 +121,31 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 					<p className="text-sm text-amber-500 mt-1">
 						Waiting for the sender to start the transfer...
 					</p>
-					<button
-						onClick={handleResetFromPeer}
-						className="mt-4 text-sm text-blue-600 hover:underline underline-offset-2"
-					>
-						Or click here to start a new transfer
-					</button>
 				</div>
 			)}
 
-			{status === 'sending' && (
+			{(status === 'sending' || status === 'receiving') && (
 				<div>
+					{totalFiles > 1 && (
+						<p className="text-sm text-gray-600 mb-2 font-medium">
+							File {currentFileIndex} of {totalFiles}
+						</p>
+					)}
+
 					<ProgressBar
-						label="Sending"
-						value={sendProg}
-						max={sendMax}
-						speed={sendSpeed}
-						eta={sendETA}
+						label={status === 'sending' ? 'Sending' : 'Receiving'}
+						value={status === 'sending' ? sendProg : recvProg}
+						max={status === 'sending' ? sendMax : recvMax}
+						speed={status === 'sending' ? sendSpeed : recvSpeed}
+						eta={status === 'sending' ? sendETA : recvETA}
 					/>
+
 					<div className="text-center mt-3">
 						<button
 							onClick={handleCancel}
 							className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
 						>
-							Cancel Transfer
-						</button>
-					</div>
-				</div>
-			)}
-
-			{status === 'receiving' && (
-				<div>
-					<ProgressBar
-						label="Receiving"
-						value={recvProg}
-						max={recvMax}
-						speed={recvSpeed}
-						eta={recvETA}
-					/>
-					<div className="text-center mt-3">
-						<button
-							onClick={handleCancel}
-							className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-						>
-							Cancel Download
+							Cancel All
 						</button>
 					</div>
 				</div>
@@ -166,7 +153,10 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 
 			{status === 'completed' && (
 				<>
-					<DownloadLink url={downloadURL} info={downloadInfo} />
+					{completedFiles.map((f, i) => (
+						<DownloadLink key={i} url={f.url} info={f.info} />
+					))}
+
 					<div className="text-center mt-4">
 						<button
 							onClick={handleResetFromPeer}

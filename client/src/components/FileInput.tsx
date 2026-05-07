@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 
 type Props = {
-	file: File | null;
-	setFile: (file: File | null) => void;
+	files: File[];
+	setFiles: (files: File[]) => void;
 	onShare: () => void;
 	isWaiting: boolean;
 };
@@ -15,7 +15,7 @@ const formatFileSize = (bytes: number) => {
 	return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 };
 
-const FileInput = ({ file, setFile, onShare, isWaiting }: Props) => {
+const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 	const [dragActive, setDragActive] = useState<boolean>(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 
@@ -41,23 +41,15 @@ const FileInput = ({ file, setFile, onShare, isWaiting }: Props) => {
 		e.stopPropagation();
 		setDragActive(false);
 
-		const files = e.dataTransfer.files;
-
-		if (files.length > 1) {
-			alert('Only one file allowed');
-			return;
-		}
-
-		const droppedFile = files[0];
-
-		if (droppedFile) {
-			setFile(droppedFile);
+		const droppedFiles = Array.from(e.dataTransfer.files);
+		if (droppedFiles.length > 0) {
+			setFiles(droppedFiles);
 		}
 	};
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const selectedFile = e.target.files?.[0] || null;
-		setFile(selectedFile);
+		const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
+		setFiles(selectedFiles);
 	};
 
 	const handleOpenDialog = () => {
@@ -69,10 +61,10 @@ const FileInput = ({ file, setFile, onShare, isWaiting }: Props) => {
 			className={`relative flex flex-col items-center justify-center 
                 w-full p-10 border-2 border-dashed rounded-xl 
                 transition-all duration-300 ease-in-out ${
-				dragActive
-					? 'border-blue-500 bg-blue-50 scale-[1.02]'
-					: 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
-			}`}
+					dragActive
+						? 'border-blue-500 bg-blue-50 scale-[1.02]'
+						: 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
+				}`}
 			onDragOver={handleDragOver}
 			onDragEnter={handleDragEnter}
 			onDragLeave={handleDragLeave}
@@ -83,6 +75,7 @@ const FileInput = ({ file, setFile, onShare, isWaiting }: Props) => {
 				ref={inputRef}
 				onChange={handleChange}
 				className="hidden"
+				multiple
 			/>
 
 			<div
@@ -106,18 +99,21 @@ const FileInput = ({ file, setFile, onShare, isWaiting }: Props) => {
 					/>
 				</svg>
 
-				{file ? (
+				{files.length > 0 ? (
 					<div className="text-center">
 						<p className="text-sm font-semibold text-gray-800">
-							{file.name}
+							{files.length} file(s) selected
 						</p>
 						<p className="mt-1 text-xs text-gray-500">
-							{formatFileSize(file.size)}
+							{formatFileSize(
+								files.reduce((acc, f) => acc + f.size, 0),
+							)}
+							total
 						</p>
 					</div>
 				) : (
 					<p className="text-sm text-gray-500">
-						Drag & drop a file here, or{' '}
+						Drag & drop a files/folders here, or{' '}
 						<span className="font-medium text-blue-600 underline">
 							browse
 						</span>
@@ -125,7 +121,7 @@ const FileInput = ({ file, setFile, onShare, isWaiting }: Props) => {
 				)}
 			</div>
 
-			{file && !isWaiting && (
+			{files.length > 0 && !isWaiting && (
 				<button
 					onClick={(e) => {
 						e.stopPropagation();
@@ -136,7 +132,7 @@ const FileInput = ({ file, setFile, onShare, isWaiting }: Props) => {
                     transition-colors hover:bg-blue-700 focus:outline-none
                     focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 				>
-					Share this File
+					Share {files.length} File(s)
 				</button>
 			)}
 		</div>
