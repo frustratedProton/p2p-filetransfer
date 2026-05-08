@@ -3,41 +3,39 @@ type Props = {
 	info: { name: string; size: number } | null;
 };
 
+const formatFileSize = (bytes: number) => {
+	if (bytes === 0) return '0 B';
+	const k = 1024;
+	const sizes = ['B', 'KB', 'MB', 'GB'];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+};
+
 const DownloadLink = ({ url, info }: Props) => {
 	if (!url || !info) return null;
 
-	const formatByte = (bytes: number) => {
-		if (bytes === 0) return '0 Bytes';
-		const k = 1024;
-		const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-	};
-
 	return (
-		<div className="mt-6 w-full p-4 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between transition-all hover:bg-green-100">
+		<div className="w-full p-4 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-between">
 			<div className="flex items-center gap-3 overflow-hidden mr-4">
-				{/* Check/Success Icon */}
 				<svg
-					className="w-6 h-6 text-green-600 shrink-0"
+					className="w-5 h-5 text-cyan-400 shrink-0"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
-					xmlns="http://www.w3.org/2000/svg"
 				>
 					<path
 						strokeLinecap="round"
 						strokeLinejoin="round"
-						strokeWidth={2}
+						strokeWidth={1.5}
 						d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 					/>
 				</svg>
 				<div className="overflow-hidden">
-					<p className="text-sm font-medium text-green-800 truncate">
+					<p className="text-sm font-medium text-zinc-300 truncate">
 						{info.name}
 					</p>
-					<p className="text-xs text-green-600">
-						{formatByte(info.size)}
+					<p className="text-xs text-zinc-600 font-mono">
+						{formatFileSize(info.size)}
 					</p>
 				</div>
 			</div>
@@ -45,13 +43,12 @@ const DownloadLink = ({ url, info }: Props) => {
 			<a
 				href={url}
 				download={info.name}
-				className="shrink-0 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+				className="shrink-0 px-4 py-1.5 text-xs font-medium text-zinc-950 bg-cyan-400 rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
 			>
-				Save File
+				Save
 			</a>
 		</div>
 	);
 };
 
 export default DownloadLink;
-    

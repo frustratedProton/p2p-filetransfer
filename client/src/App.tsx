@@ -22,32 +22,34 @@ function App() {
 	const copyLink = () => {
 		navigator.clipboard.writeText(window.location.href);
 		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
+		setTimeout(() => setCopied(false), 1500);
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 text-slate-800 p-4 md:p-8">
-			<div className="max-w-2xl mx-auto">
-				<div className="text-center mb-8">
-					<h1 className="text-3xl font-bold tracking-tight text-slate-900">
-						P2P File Transfer
+		<div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-4">
+			<div className="w-full max-w-md">
+				<div className="text-center mb-10">
+					<h1 className="text-4xl font-bold uppercase tracking-widest text-zinc-400">
+						P2P Transfer
 					</h1>
 
 					{roomId && (
-						<div className="mt-4 flex items-center justify-center gap-3 text-sm">
-							<code className="font-mono bg-slate-200 px-3 py-1.5 rounded-lg">
-								{roomId}
-							</code>
-							<button
-								onClick={copyLink}
-								className={`font-medium transition-colors ${
-									copied
-										? 'text-green-600'
-										: 'text-blue-600 hover:underline'
-								}`}
-							>
-								{copied ? '✓ Copied!' : 'Copy Link'}
-							</button>
+						<div className="mt-6 flex items-center justify-center">
+							<div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full">
+								<span className="text-sm font-mono font-semibold tracking-wider text-zinc-300">
+									{roomId}
+								</span>
+								<button
+									onClick={copyLink}
+									className={`text-xs font-medium ml-2 transition-colors duration-150 ${
+										copied
+											? 'text-green-400'
+											: 'text-cyan-400 hover:text-cyan-300'
+									}`}
+								>
+									{copied ? '✓ Copied' : 'Copy'}
+								</button>
+							</div>
 						</div>
 					)}
 				</div>

@@ -19,8 +19,6 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		recvProg,
 		sendMax,
 		recvMax,
-		// downloadURL,
-		// downloadInfo,
 		completedFiles,
 		totalFiles,
 		startSend,
@@ -36,7 +34,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		if (files.length === 0) return;
 		const newRoomId = Math.random().toString(36).substring(2, 8);
 		onRoomCreated(newRoomId);
-		startSend(files, newRoomId); // ✅ pass full array
+		startSend(files, newRoomId);
 	};
 
 	const handleCancel = () => {
@@ -60,27 +58,27 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 			: completedFiles.length;
 
 	return (
-		<section className="w-full max-w-xl mx-auto mt-8 flex flex-col gap-4">
+		<section className="w-full flex flex-col gap-6">
 			{status === 'cancelled' && (
-				<div className="text-center p-8 bg-red-50 border-2 border-red-200 rounded-xl animate-pulse">
-					<p className="text-lg font-semibold text-red-700">
-						Transfer Cancelled
+				<div className="text-center p-8 bg-zinc-900 border border-zinc-800 rounded-lg">
+					<p className="text-sm font-semibold text-zinc-400 uppercase tracking-widest">
+						Cancelled
 					</p>
-					<p className="text-sm text-red-500 mt-1">Resetting...</p>
+					<p className="text-xs text-zinc-600 mt-2">Resetting...</p>
 				</div>
 			)}
 
 			{status === 'peer-cancelled' && (
-				<div className="text-center p-8 bg-red-50 border-2 border-red-200 rounded-xl">
-					<p className="text-lg font-semibold text-red-700">
-						Peer Cancelled Transfer
+				<div className="text-center p-8 bg-zinc-900 border border-zinc-800 rounded-lg">
+					<p className="text-sm font-semibold text-zinc-400 uppercase tracking-widest">
+						Peer Disconnected
 					</p>
-					<p className="text-sm text-red-500 mt-1">
-						The other user disconnected or cancelled.
+					<p className="text-xs text-zinc-600 mt-2">
+						The other user cancelled or closed the tab.
 					</p>
 					<button
 						onClick={handleResetFromPeer}
-						className="mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+						className="mt-6 px-5 py-2 bg-cyan-400 text-zinc-950 text-sm font-medium rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
 					>
 						Start New Transfer
 					</button>
@@ -97,37 +95,38 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 			)}
 
 			{status === 'waiting-for-peer' && (
-				<div className="text-center p-8 bg-blue-50 border-2 border-blue-300 rounded-xl">
-					<p className="text-lg font-semibold text-blue-900">
+				<div className="text-center p-8 bg-zinc-900 border border-zinc-800 rounded-lg">
+					<p className="text-sm font-semibold text-cyan-400 uppercase tracking-widest">
 						Waiting for peer...
 					</p>
-					<p className="text-sm text-blue-700 mt-2">
-						Share the link at the top with the receiver!
+					<p className="text-xs text-zinc-500 mt-2">
+						Share the link at the top with the receiver.
 					</p>
 					<button
 						onClick={handleCancel}
-						className="mt-4 px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+						className="mt-6 text-xs uppercase tracking-widest text-zinc-600 hover:text-zinc-300 transition-colors duration-150"
 					>
-						Cancel Transfer
+						Cancel
 					</button>
 				</div>
 			)}
 
 			{status === 'idle' && roomId && (
-				<div className="text-center p-6 bg-amber-50 border border-amber-200 rounded-lg">
-					<p className="text-amber-700 font-medium">
-						Connected to room!
+				<div className="text-center p-6 bg-zinc-900 border border-zinc-800 rounded-lg">
+					<p className="text-zinc-400 font-medium text-sm flex items-center justify-center gap-2">
+						<span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+						Connected
 					</p>
-					<p className="text-sm text-amber-500 mt-1">
-						Waiting for the sender to start the transfer...
+					<p className="text-xs text-zinc-600 mt-2">
+						Waiting for the sender to start...
 					</p>
 				</div>
 			)}
 
 			{(status === 'sending' || status === 'receiving') && (
-				<div>
+				<div className="flex flex-col gap-4">
 					{totalFiles > 1 && (
-						<p className="text-sm text-gray-600 mb-2 font-medium">
+						<p className="text-xs text-zinc-500 font-mono tracking-wider">
 							File {currentFileIndex} of {totalFiles}
 						</p>
 					)}
@@ -140,32 +139,32 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 						eta={status === 'sending' ? sendETA : recvETA}
 					/>
 
-					<div className="text-center mt-3">
+					<div className="text-center">
 						<button
 							onClick={handleCancel}
-							className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+							className="text-xs uppercase tracking-widest text-zinc-600 hover:text-zinc-300 transition-colors duration-150"
 						>
-							Cancel All
+							Cancel
 						</button>
 					</div>
 				</div>
 			)}
 
 			{status === 'completed' && (
-				<>
+				<div className="flex flex-col gap-4">
 					{completedFiles.map((f, i) => (
 						<DownloadLink key={i} url={f.url} info={f.info} />
 					))}
 
-					<div className="text-center mt-4">
+					<div className="text-center mt-2">
 						<button
 							onClick={handleResetFromPeer}
-							className="px-6 py-2.5 text-sm font-medium text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+							className="px-6 py-2 text-sm font-medium text-zinc-950 bg-cyan-400 rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
 						>
 							Send Another File
 						</button>
 					</div>
-				</>
+				</div>
 			)}
 		</section>
 	);

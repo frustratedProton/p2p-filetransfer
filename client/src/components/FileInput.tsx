@@ -7,7 +7,6 @@ type Props = {
 	isWaiting: boolean;
 };
 
-// is this really am i supposed to be doing this
 type FileSystemEntry = {
 	isFile: boolean;
 	isDirectory: boolean;
@@ -30,11 +29,11 @@ type DataTransferItemWithEntry = DataTransferItem & {
 };
 
 const formatFileSize = (bytes: number) => {
-	if (bytes === 0) return '0 Bytes';
+	if (bytes === 0) return '0 B';
 	const k = 1024;
-	const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+	const sizes = ['B', 'KB', 'MB', 'GB'];
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
-	return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 };
 
 const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
@@ -103,7 +102,6 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const selectedFiles = e.target.files ? Array.from(e.target.files) : [];
-
 		setFiles(selectedFiles);
 	};
 
@@ -111,23 +109,24 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 		fileInputRef.current?.click();
 	};
 
-	const openFolderPicker = () => {
+	const openFolderPicker = (e: React.MouseEvent) => {
+		e.stopPropagation();
 		folderInputRef.current?.click();
 	};
 
 	return (
 		<div
 			className={`relative flex flex-col items-center justify-center 
-                w-full p-10 border-2 border-dashed rounded-xl 
-                transition-all duration-300 ease-in-out ${
+                w-full p-16 border rounded-lg transition-colors duration-150 cursor-pointer ${
 					dragActive
-						? 'border-blue-500 bg-blue-50 scale-[1.02]'
-						: 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
+						? 'border-cyan-400 bg-zinc-800/50'
+						: 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
 				}`}
 			onDragOver={handleDragOver}
 			onDragEnter={handleDragEnter}
 			onDragLeave={handleDragLeave}
 			onDrop={handleDrop}
+			onClick={openFilePicker}
 		>
 			<input
 				type="file"
@@ -146,10 +145,10 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 				webkitdirectory=""
 			/>
 
-			<div className="flex flex-col items-center gap-3">
+			<div className="flex flex-col items-center gap-4">
 				<svg
-					className={`w-10 h-10 transition-colors duration-300 ${
-						dragActive ? 'text-blue-500' : 'text-gray-400'
+					className={`w-12 h-12 transition-colors duration-150 ${
+						dragActive ? 'text-cyan-400' : 'text-zinc-700'
 					}`}
 					fill="none"
 					stroke="currentColor"
@@ -158,17 +157,17 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 					<path
 						strokeLinecap="round"
 						strokeLinejoin="round"
-						strokeWidth={2}
+						strokeWidth={1.5}
 						d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
 					/>
 				</svg>
 
 				{files.length > 0 ? (
 					<div className="text-center">
-						<p className="text-sm font-semibold text-gray-800">
+						<p className="text-sm font-medium text-zinc-300">
 							{files.length} file(s) selected
 						</p>
-						<p className="mt-1 text-xs text-gray-500">
+						<p className="mt-1 text-xs text-zinc-600 font-mono">
 							{formatFileSize(
 								files.reduce((acc, f) => acc + f.size, 0),
 							)}{' '}
@@ -176,23 +175,29 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 						</p>
 					</div>
 				) : (
-					<p className="text-sm text-gray-500 text-center">
-						Drag & drop files or folders here
+					<p className="text-sm text-zinc-600">
+						Drop files or folders here
 					</p>
 				)}
 
-				<div className="flex gap-4 mt-2">
+				<div className="flex gap-6 mt-2">
 					<button
 						type="button"
-						onClick={openFilePicker}
-						className="text-blue-600 underline"
+						onClick={(e) => {
+							e.stopPropagation();
+							openFilePicker();
+						}}
+						className="text-xs uppercase tracking-widest text-zinc-500 hover:text-cyan-400 transition-colors duration-150"
 					>
 						Browse Files
 					</button>
 					<button
 						type="button"
-						onClick={openFolderPicker}
-						className="text-blue-600 underline"
+						onClick={(e) => {
+							e.stopPropagation();
+							openFolderPicker(e);
+						}}
+						className="text-xs uppercase tracking-widest text-zinc-500 hover:text-cyan-400 transition-colors duration-150"
 					>
 						Browse Folder
 					</button>
@@ -201,13 +206,13 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 
 			{files.length > 0 && !isWaiting && (
 				<button
-					onClick={onShare}
-					className="mt-6 px-6 py-2.5 text-sm font-medium
-                    text-white bg-blue-600 rounded-lg shadow-sm
-                    transition-colors hover:bg-blue-700 focus:outline-none
-                    focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+					onClick={(e) => {
+						e.stopPropagation();
+						onShare();
+					}}
+					className="mt-8 px-6 py-2 text-sm font-medium text-zinc-950 bg-cyan-400 rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
 				>
-					Share {files.length} File(s)
+					Send {files.length} File(s)
 				</button>
 			)}
 		</div>

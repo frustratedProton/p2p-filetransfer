@@ -10,8 +10,11 @@ const ProgressBar = ({ label, value, max, speed, eta }: Props) => {
 	const percentage = max > 0 ? Math.round((value / max) * 100) : 0;
 
 	const formatSpeed = (bytesPerSec: number) => {
-		if (!bytesPerSec) return '0 MB/s';
-		return (bytesPerSec / (1024 * 1024)).toFixed(2) + ' MB/s';
+		if (!bytesPerSec) return '0 B/s';
+		const k = 1024;
+		const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+		const i = Math.floor(Math.log(bytesPerSec) / Math.log(k));
+		return `${(bytesPerSec / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 	};
 
 	const formatTime = (seconds: number | null) => {
@@ -22,28 +25,28 @@ const ProgressBar = ({ label, value, max, speed, eta }: Props) => {
 	};
 
 	return (
-		<div className="w-full mt-6">
-			<div className="flex justify-between mb-1">
-				<span className="text-sm font-medium text-gray-700">
+		<div className="w-full">
+			<div className="flex justify-between mb-2">
+				<span className="text-xs uppercase tracking-widest text-zinc-500">
 					{label}
 				</span>
-				<span className="text-sm font-medium text-gray-500">
+				<span className="text-xs font-mono text-zinc-500">
 					{percentage}%
 				</span>
 			</div>
 
-			<div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+			<div className="w-full bg-zinc-800 rounded-full h-1 overflow-hidden">
 				<div
-					className={`h-2.5 rounded-full transition-all duration-300 ease-out ${
-						percentage >= 100 ? 'bg-green-500' : 'bg-blue-600'
+					className={`h-1 rounded-full transition-all duration-150 ease-out ${
+						percentage >= 100 ? 'bg-green-400' : 'bg-cyan-400'
 					}`}
 					style={{ width: `${percentage}%` }}
 				></div>
 			</div>
 
-			<div className="flex justify-between text-xs text-gray-500 mt-1">
+			<div className="flex justify-between text-xs text-zinc-600 font-mono mt-2">
 				<span>{formatSpeed(speed ?? 0)}</span>
-				<span>ETA: {formatTime(eta ?? null)}</span>
+				<span>{formatTime(eta ?? null)}</span>
 			</div>
 		</div>
 	);
