@@ -67,6 +67,9 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		onCancel();
 	};
 
+	const isSendView =
+		status === 'sending' || (status === 'completed' && sendMax > 0);
+
 	const currentFileIndex =
 		status === 'sending' || status === 'receiving'
 			? completedFiles.length + 1
@@ -155,11 +158,11 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 					)}
 
 					<ProgressBar
-						label={status === 'receiving' ? 'Receiving' : 'Sending'}
-						value={status === 'receiving' ? recvProg : sendProg}
-						max={status === 'receiving' ? recvMax : sendMax}
-						speed={status === 'receiving' ? recvSpeed : sendSpeed}
-						eta={status === 'receiving' ? recvETA : sendETA}
+						label={isSendView ? 'Sending' : 'Receiving'}
+						value={isSendView ? sendProg : recvProg}
+						max={isSendView ? sendMax : recvMax}
+						speed={isSendView ? sendSpeed : recvSpeed}
+						eta={isSendView ? sendETA : recvETA}
 					/>
 
 					{status !== 'completed' && (

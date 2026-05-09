@@ -152,6 +152,9 @@ export const useFileTransfer = (roomId: string | null) => {
 			}
 			if (data.type === 'batch-end') {
 				setStatus('completed');
+                recvStartTime.current = null;
+                setRecvSpeed(0);
+                setRecvETA(null);
 				return;
 			}
 		}
@@ -269,6 +272,9 @@ export const useFileTransfer = (roomId: string | null) => {
 				sendChannel.current.send(JSON.stringify({ type: 'batch-end' }));
 			}
 			setStatus('completed');
+            sendStartTime.current = null;
+            setSendSpeed(0);
+            setSendETA(null);
 		}
 	};
 
