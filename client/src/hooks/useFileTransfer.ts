@@ -451,12 +451,17 @@ export const useFileTransfer = (roomId: string | null) => {
 		// setDownloadInfo(null);
 		setCompletedFiles([]);
 
-		if (socket.current?.readyState === WebSocket.OPEN) {
-			socket.current.send(
-				JSON.stringify({ type: 'join', room: targetRoomId }),
-			);
+		if (sendChannel.current && sendChannel.current.readyState === 'open') {
+			setStatus('sending');
+			sendData();
+		} else {
+			if (socket.current?.readyState === WebSocket.OPEN) {
+				socket.current.send(
+					JSON.stringify({ type: 'join', room: targetRoomId }),
+				);
+			}
+			setStatus('waiting-for-peer');
 		}
-		setStatus('waiting-for-peer');
 	};
 
 	const resetTransfer = () => {
@@ -467,6 +472,7 @@ export const useFileTransfer = (roomId: string | null) => {
 	};
 
 	const clearStatus = () => {
+		resetStats();
 		setStatus('idle');
 	};
 
