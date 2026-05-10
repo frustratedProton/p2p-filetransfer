@@ -117,7 +117,7 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 	return (
 		<div
 			className={`relative flex flex-col items-center justify-center 
-                w-full p-16 border rounded-lg transition-colors duration-150 cursor-pointer ${
+                w-full p-8 sm:p-16 border rounded-lg transition-colors duration-150 cursor-pointer ${
 					dragActive
 						? 'border-cyan-400 bg-zinc-800/50'
 						: 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
@@ -175,19 +175,19 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 						</p>
 					</div>
 				) : (
-					<p className="text-sm text-zinc-600">
-						Drop files or folders here
+					<p className="text-sm text-zinc-600 text-center">
+						Tap to select files or drop here
 					</p>
 				)}
 
-				<div className="flex gap-6 mt-2">
+				<div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mt-2">
 					<button
 						type="button"
 						onClick={(e) => {
 							e.stopPropagation();
 							openFilePicker();
 						}}
-						className="text-xs uppercase tracking-widest text-zinc-500 hover:text-cyan-400 transition-colors duration-150"
+						className="text-xs uppercase tracking-widest text-zinc-500 hover:text-cyan-400 transition-colors duration-150 py-2 px-4 rounded-md hover:bg-zinc-800"
 					>
 						Browse Files
 					</button>
@@ -197,7 +197,7 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 							e.stopPropagation();
 							openFolderPicker(e);
 						}}
-						className="text-xs uppercase tracking-widest text-zinc-500 hover:text-cyan-400 transition-colors duration-150"
+						className="text-xs uppercase tracking-widest text-zinc-500 hover:text-cyan-400 transition-colors duration-150 py-2 px-4 rounded-md hover:bg-zinc-800"
 					>
 						Browse Folder
 					</button>
@@ -210,7 +210,7 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 						e.stopPropagation();
 						onShare();
 					}}
-					className="mt-8 px-6 py-2 text-sm font-medium text-zinc-950 bg-cyan-400 rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
+					className="mt-8 px-8 py-3 text-sm font-medium text-zinc-950 bg-cyan-400 rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98] w-full sm:w-auto"
 				>
 					Send {files.length} File(s)
 				</button>

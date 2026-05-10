@@ -22,11 +22,6 @@ export const useFileTransfer = (roomId: string | null) => {
 	const [recvProg, setRecvProg] = useState<number>(0);
 	const [sendMax, setSendMax] = useState<number>(0);
 	const [recvMax, setRecvMax] = useState<number>(0);
-	// const [downloadURL, setDownloadURL] = useState<string | null>(null);
-	// const [downloadInfo, setDownloadInfo] = useState<{
-	// 	name: string;
-	// 	size: number;
-	// } | null>(null);
 	const [sendSpeed, setSendSpeed] = useState<number>(0);
 	const [recvSpeed, setRecvSpeed] = useState<number>(0);
 	const [sendETA, setSendETA] = useState<number | null>(null);
@@ -35,10 +30,12 @@ export const useFileTransfer = (roomId: string | null) => {
 		Array<{ url: string; info: { name: string; size: number } }>
 	>([]);
 	const [totalFiles, setTotalFiles] = useState<number>(0);
+	const [lastDirection, setLastDirection] = useState<
+		'send' | 'receive' | null
+	>(null);
 
 	const pc = useRef<RTCPeerConnection | null>(null);
-	const sendChannel = useRef<RTCDataChannel | null>(null);
-	const recvChannel = useRef<RTCDataChannel | null>(null);
+	const dataChannel = useRef<RTCDataChannel | null>(null);
 	const fileReader = useRef<FileReader | null>(null);
 	const socket = useRef<WebSocket | null>(null);
 
@@ -56,7 +53,9 @@ export const useFileTransfer = (roomId: string | null) => {
 	const sendMaxRef = useRef(0);
 	const recvMaxRef = useRef(0);
 
-	const isOfferer = useRef<boolean>(false);
+	const isTransferring = useRef<boolean>(false);
+	const isPCOfferer = useRef<boolean>(false);
+
 	const currentFile = useRef<File | null>(null);
 	const offset = useRef<number>(0);
 
@@ -82,17 +81,12 @@ export const useFileTransfer = (roomId: string | null) => {
 			fileReader.current = null;
 		}
 
-		if (sendChannel.current) {
-			sendChannel.current.onbufferedamountlow = null;
-			sendChannel.current.onerror = null;
-			sendChannel.current.close();
-			sendChannel.current = null;
-		}
-
-		if (recvChannel.current) {
-			recvChannel.current.onmessage = null;
-			recvChannel.current.close();
-			recvChannel.current = null;
+		if (dataChannel.current) {
+			dataChannel.current.onbufferedamountlow = null;
+			dataChannel.current.onmessage = null;
+			dataChannel.current.onerror = null;
+			dataChannel.current.close();
+			dataChannel.current = null;
 		}
 
 		if (pc.current) {
@@ -108,8 +102,6 @@ export const useFileTransfer = (roomId: string | null) => {
 		setRecvProg(0);
 		setSendMax(0);
 		setRecvMax(0);
-		// setDownloadURL(null);
-		// setDownloadInfo(null);
 		setSendSpeed(0);
 		setRecvSpeed(0);
 		setSendETA(null);
@@ -124,37 +116,79 @@ export const useFileTransfer = (roomId: string | null) => {
 		recvMaxRef.current = 0;
 		sendStartTime.current = null;
 		recvStartTime.current = null;
+		isTransferring.current = false;
 
 		currentFile.current = null;
-		isOfferer.current = false;
 		offset.current = 0;
+		incomingFileInfo.current = null;
+		recvBuffer.current = [];
+		recvSize.current = 0;
+		setLastDirection(null);
+	};
+
+	const processQueue = () => {
+		if (queueRef.current.length > 0 && !isTransferring.current) {
+			const nextFile = queueRef.current.shift();
+			if (nextFile) {
+				startSendFile(nextFile);
+			}
+			return;
+		}
+
+		if (!isTransferring.current && queueRef.current.length === 0) {
+			if (sendMaxRef.current > 0 || recvMaxRef.current > 0) {
+				setStatus('completed');
+				sendStartTime.current = null;
+				recvStartTime.current = null;
+				setSendSpeed(0);
+				setRecvSpeed(0);
+				setSendETA(null);
+				setRecvETA(null);
+			}
+		}
 	};
 
 	const onReceiveMessage = (event: MessageEvent) => {
 		if (!recvStartTime.current) {
-			recvStartTime.current = performance.now();
+			recvStartTime.current = now();
 		}
 
 		if (typeof event.data === 'string') {
 			const data = JSON.parse(event.data);
 			if (data.type === 'metadata') {
+				isTransferring.current = true;
 				recvBuffer.current = [];
 				recvSize.current = 0;
 				setRecvProg(0);
 				setRecvSpeed(0);
 				setRecvETA(null);
-				recvStartTime.current = performance.now();
+				recvStartTime.current = now();
 
 				incomingFileInfo.current = data;
 				setRecvMax(data.size);
 				setStatus('receiving');
+				setLastDirection('receive');
 				return;
 			}
 			if (data.type === 'batch-end') {
-				setStatus('completed');
-                recvStartTime.current = null;
-                setRecvSpeed(0);
-                setRecvETA(null);
+				isTransferring.current = false;
+				recvStartTime.current = null;
+				setRecvSpeed(0);
+				setRecvETA(null);
+
+				if (incomingFileInfo.current && recvSize.current > 0) {
+					const blob = new Blob(recvBuffer.current);
+					recvBuffer.current = [];
+					recvSize.current = 0;
+					const url = URL.createObjectURL(blob);
+					setCompletedFiles((prev) => [
+						...prev,
+						{ url, info: incomingFileInfo.current },
+					]);
+					incomingFileInfo.current = null;
+				}
+
+				processQueue();
 				return;
 			}
 		}
@@ -162,23 +196,6 @@ export const useFileTransfer = (roomId: string | null) => {
 		recvBuffer.current.push(event.data);
 		recvSize.current += event.data.byteLength;
 		setRecvProg(recvSize.current);
-
-		if (
-			incomingFileInfo.current &&
-			recvSize.current === incomingFileInfo.current.size
-		) {
-			const blob = new Blob(recvBuffer.current);
-			recvBuffer.current = [];
-			recvSize.current = 0;
-
-			const url = URL.createObjectURL(blob);
-			// setDownloadURL(url);
-			// setDownloadInfo(incomingFileInfo.current);
-			setCompletedFiles((prev) => [
-				...prev,
-				{ url, info: incomingFileInfo.current },
-			]);
-		}
 	};
 
 	const readSlice = () => {
@@ -191,16 +208,24 @@ export const useFileTransfer = (roomId: string | null) => {
 		fileReader.current.readAsArrayBuffer(slice);
 	};
 
-	const sendData = () => {
-		sendStartTime.current = now();
-
-		const file = currentFile.current;
-		if (!file || !sendChannel.current) return;
-
+	const startSendFile = (file: File) => {
+		currentFile.current = file;
+		offset.current = 0;
+		setSendProg(0);
 		setSendMax(file.size);
-		setRecvMax(file.size);
+		setSendSpeed(0);
+		setSendETA(null);
+		sendStartTime.current = now();
+		isTransferring.current = true;
+		setStatus('sending');
+		setLastDirection('send');
 
-		sendChannel.current.send(
+		if (!dataChannel.current || dataChannel.current.readyState !== 'open') {
+			console.error('Channel not ready');
+			return;
+		}
+
+		dataChannel.current.send(
 			JSON.stringify({
 				type: 'metadata',
 				name: file.webkitRelativePath || file.name,
@@ -209,91 +234,66 @@ export const useFileTransfer = (roomId: string | null) => {
 		);
 
 		fileReader.current = new FileReader();
-		offset.current = 0;
-
 		fileReader.current.onload = (e) => {
 			const result = e.target?.result;
-			if (!result || !sendChannel.current) return;
+			if (!result || !dataChannel.current) return;
 
-			sendChannel.current.send(result as ArrayBuffer);
+			dataChannel.current.send(result as ArrayBuffer);
 			offset.current += (result as ArrayBuffer).byteLength;
 			setSendProg(offset.current);
 
-			if (sendChannel.current.bufferedAmount > HIGH_WATER_MARK) {
-				return;
-			}
-
 			if (offset.current < file.size) {
-				readSlice();
+				if (dataChannel.current.bufferedAmount <= HIGH_WATER_MARK) {
+					readSlice();
+				}
 			} else {
+				dataChannel.current.send(JSON.stringify({ type: 'batch-end' }));
+				isTransferring.current = false;
+				sendStartTime.current = null;
+				setSendSpeed(0);
+				setSendETA(null);
+
 				setCompletedFiles((prev) => [
 					...prev,
 					{
 						url: '',
-						info: {
-							name: currentFile.current!.name,
-							size: currentFile.current!.size,
-						},
+						info: { name: file.name, size: file.size },
 					},
 				]);
+
 				processQueue();
 			}
 		};
-
 		fileReader.current.onerror = console.error;
 		readSlice();
 	};
 
-	const processQueue = () => {
-		if (queueRef.current.length > 0) {
-			const nextFile = queueRef.current.shift();
-			if (nextFile) {
-				currentFile.current = nextFile;
-				offset.current = 0;
-				setSendProg(0);
-				setSendMax(0);
-				setSendSpeed(0);
-				setSendETA(null);
-				sendStartTime.current = now();
+	const setupChannel = (channel: RTCDataChannel) => {
+		dataChannel.current = channel;
+		channel.binaryType = 'arraybuffer';
+		channel.bufferedAmountLowThreshold = LOW_WATER_MARK;
 
-				if (
-					sendChannel.current &&
-					sendChannel.current.readyState === 'open'
-				) {
-					setStatus('sending');
-					sendData();
-				}
-			}
-		} else {
+		channel.onbufferedamountlow = () => {
 			if (
-				sendChannel.current &&
-				sendChannel.current.readyState === 'open'
+				isTransferring.current &&
+				currentFile.current &&
+				offset.current < currentFile.current.size
 			) {
-				sendChannel.current.send(JSON.stringify({ type: 'batch-end' }));
+				readSlice();
 			}
-			setStatus('completed');
-            sendStartTime.current = null;
-            setSendSpeed(0);
-            setSendETA(null);
-		}
-	};
-
-	const setupSendChannel = () => {
-		if (!sendChannel.current) return;
-		sendChannel.current.binaryType = 'arraybuffer';
-
-		sendChannel.current.bufferedAmountLowThreshold = LOW_WATER_MARK;
-
-		sendChannel.current.onbufferedamountlow = () => {
-			readSlice();
 		};
 
-		sendChannel.current.onopen = () => {
-			setStatus('sending');
-			sendData();
+		channel.onopen = () => {
+			setStatus('idle');
+			if (queueRef.current.length > 0 && !isTransferring.current) {
+				const next = queueRef.current.shift();
+				if (next) startSendFile(next);
+			}
 		};
 
-		sendChannel.current.onerror = (e) => {
+		channel.onmessage = onReceiveMessage;
+
+		channel.onerror = (e) => {
 			if (
 				(e as RTCErrorEvent).error?.message?.includes(
 					'User-Initiated Abort',
@@ -304,10 +304,10 @@ export const useFileTransfer = (roomId: string | null) => {
 		};
 	};
 
-	const createConnection = async () => {
+	const establishConnection = async (offerer: boolean) => {
+		isPCOfferer.current = offerer;
 		cleanupConnection();
 		setStatus('connecting');
-
 		pc.current = new RTCPeerConnection();
 
 		pc.current.onicecandidate = (event) => {
@@ -321,19 +321,16 @@ export const useFileTransfer = (roomId: string | null) => {
 			}
 		};
 
-		if (isOfferer.current) {
-			sendChannel.current =
-				pc.current.createDataChannel('sendDataChannel');
-			setupSendChannel();
+		if (offerer) {
+			const channel = pc.current.createDataChannel('fileTransfer');
+			setupChannel(channel);
 
 			const offer = await pc.current.createOffer();
 			await pc.current.setLocalDescription(offer);
 			socket.current?.send(JSON.stringify({ type: 'offer', offer }));
 		} else {
 			pc.current.ondatachannel = (event) => {
-				recvChannel.current = event.channel;
-				recvChannel.current.binaryType = 'arraybuffer';
-				recvChannel.current.onmessage = onReceiveMessage;
+				setupChannel(event.channel);
 			};
 		}
 	};
@@ -353,14 +350,15 @@ export const useFileTransfer = (roomId: string | null) => {
 			const data = JSON.parse(event.data);
 
 			if (data.type === 'peer-joined') {
-				if (isOfferer.current) {
-					createConnection();
+				if (isPCOfferer.current) {
+					await establishConnection(true);
 				}
 				return;
 			}
 
 			if (data.type === 'leave') {
 				cleanupConnection();
+				setStatus('peer-cancelled');
 				return;
 			}
 
@@ -372,8 +370,8 @@ export const useFileTransfer = (roomId: string | null) => {
 			}
 
 			if (data.type === 'offer') {
-				isOfferer.current = false;
-				await createConnection();
+				isPCOfferer.current = false;
+				await establishConnection(false);
 
 				await pc.current?.setRemoteDescription(data.offer);
 				const answer = await pc.current!.createAnswer();
@@ -446,27 +444,32 @@ export const useFileTransfer = (roomId: string | null) => {
 		if (files.length === 0) return;
 
 		const [firstFile, ...rest] = files;
-		currentFile.current = firstFile;
 		queueRef.current = rest;
 		setTotalFiles(files.length);
 
-		isOfferer.current = true;
-		setSendProg(0);
-		setRecvProg(0);
-		// setDownloadURL(null);
-		// setDownloadInfo(null);
-		setCompletedFiles([]);
+		const needsConnection =
+			!pc.current ||
+			pc.current.connectionState === 'closed' ||
+			!dataChannel.current;
 
-		if (sendChannel.current && sendChannel.current.readyState === 'open') {
-			setStatus('sending');
-			sendData();
-		} else {
+		if (needsConnection) {
+			const iAmOfferer = !roomIdRef.current;
+			isPCOfferer.current = iAmOfferer;
+
 			if (socket.current?.readyState === WebSocket.OPEN) {
 				socket.current.send(
 					JSON.stringify({ type: 'join', room: targetRoomId }),
 				);
 			}
 			setStatus('waiting-for-peer');
+
+			queueRef.current.unshift(firstFile);
+		} else {
+			if (!isTransferring.current) {
+				startSendFile(firstFile);
+			} else {
+				queueRef.current.unshift(firstFile);
+			}
 		}
 	};
 
@@ -475,6 +478,13 @@ export const useFileTransfer = (roomId: string | null) => {
 		cleanupConnection();
 		resetStats();
 		setStatus('cancelled');
+	};
+
+	const disconnect = () => {
+		socket.current?.send(JSON.stringify({ type: 'leave' }));
+		cleanupConnection();
+		resetStats();
+		setStatus('idle');
 	};
 
 	const clearStatus = () => {
@@ -488,13 +498,13 @@ export const useFileTransfer = (roomId: string | null) => {
 		recvProg,
 		sendMax,
 		recvMax,
-		// downloadURL,
-		// downloadInfo,
 		completedFiles,
 		totalFiles,
+        lastDirection,
 		startSend,
 		resetTransfer,
 		clearStatus,
+		disconnect,
 		sendSpeed,
 		recvSpeed,
 		sendETA,

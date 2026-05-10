@@ -12,7 +12,7 @@ type Props = {
 
 const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 	const [files, setFiles] = useState<File[]>([]);
-	const [isSender, setIsSender] = useState(false);
+	// const [isSender, setIsSender] = useState(false);
 
 	const {
 		status,
@@ -25,6 +25,8 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		startSend,
 		resetTransfer,
 		clearStatus,
+		lastDirection,
+		disconnect,
 		sendSpeed,
 		recvSpeed,
 		sendETA,
@@ -38,7 +40,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		if (!targetRoom) {
 			targetRoom = Math.random().toString(36).substring(2, 8);
 			onRoomCreated(targetRoom);
-			setIsSender(true);
+			// setIsSender(true);
 		}
 
 		startSend(files, targetRoom);
@@ -46,29 +48,22 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 
 	const handleCancel = () => {
 		resetTransfer();
-		setTimeout(() => {
-			clearStatus();
-			setFiles([]);
-			setIsSender(false);
-			onCancel();
-		}, 1500);
-	};
-
-	const handleSendAnother = () => {
 		clearStatus();
 		setFiles([]);
 	};
 
 	const handleCompletion = () => {
-		resetTransfer();
-		clearStatus();
+		clearStatus(); // Keeps WebRTC alive for bidirectional sending!
 		setFiles([]);
-		setIsSender(false);
-		onCancel();
 	};
 
-	const isSendView =
-		status === 'sending' || (status === 'completed' && sendMax > 0);
+	const handleDisconnect = () => {
+		disconnect();
+		onCancel();
+        setFiles([]);
+	};
+
+	const isSendView = lastDirection === 'send'; // ADD THIS
 
 	const currentFileIndex =
 		status === 'sending' || status === 'receiving'
@@ -103,25 +98,13 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 				</div>
 			)}
 
-			{status === 'idle' && (!roomId || isSender) && (
+			{status === 'idle' && (
 				<FileInput
 					files={files}
 					setFiles={setFiles}
 					onShare={handleShare}
 					isWaiting={false}
 				/>
-			)}
-
-			{status === 'idle' && roomId && !isSender && (
-				<div className="text-center p-6 bg-zinc-900 border border-zinc-800 rounded-lg">
-					<p className="text-zinc-400 font-medium text-sm flex items-center justify-center gap-2">
-						<span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-						Connected
-					</p>
-					<p className="text-xs text-zinc-600 mt-2">
-						Waiting for the sender to start...
-					</p>
-				</div>
 			)}
 
 			{status === 'waiting-for-peer' && (
@@ -186,19 +169,20 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 								/>
 							))}
 
+							{/* REPLACED BUTTONS HERE */}
 							<div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
+								<button
+									onClick={handleDisconnect}
+									className="px-6 py-2 text-sm font-medium text-zinc-100 bg-zinc-700 rounded-md hover:bg-zinc-600 transition-colors duration-150 active:scale-[0.98]"
+								>
+									Disconnect
+								</button>
+
 								<button
 									onClick={handleCompletion}
 									className="px-6 py-2 text-sm font-medium text-zinc-950 bg-green-400 rounded-md hover:bg-green-300 transition-colors duration-150 active:scale-[0.98]"
 								>
-									Done
-								</button>
-
-								<button
-									onClick={handleSendAnother}
-									className="px-6 py-2 text-sm font-medium text-zinc-950 bg-cyan-400 rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
-								>
-									Send Another File
+									Send Another
 								</button>
 							</div>
 						</>
