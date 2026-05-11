@@ -8,3 +8,5 @@ Simple peer-to-peer file transfer using WebRTC DataChannels and a simple signali
 2. Select a file
 3. Click **Send**
 4. Download the file when transfer completes
+
+### currently its strictly 2 peer only.
