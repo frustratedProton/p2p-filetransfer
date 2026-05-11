@@ -1,13 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FileTransfer from './components/FileTransfer';
 
-const initialRoomId = window.location.hash
-	? window.location.hash.slice(1)
-	: null;
+const parseRoomIdFromHash = (): string | null => {
+	const hash = window.location.hash.slice(1); 
+	if (hash && /^[a-z]+-[a-z]+$/.test(hash)) {
+		return hash;
+	}
+	return null;
+};
 
 function App() {
-	const [roomId, setRoomId] = useState<string | null>(initialRoomId);
+	const [roomId, setRoomId] = useState<string | null>(parseRoomIdFromHash);
 	const [copied, setCopied] = useState(false);
+
+	useEffect(() => {
+		const handleHashChange = () => {
+			setRoomId(parseRoomIdFromHash());
+		};
+		window.addEventListener('hashchange', handleHashChange);
+		return () => window.removeEventListener('hashchange', handleHashChange);
+	}, []);
 
 	const handleRoomCreated = (newRoomId: string) => {
 		window.history.pushState({}, '', `#${newRoomId}`);

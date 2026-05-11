@@ -406,6 +406,7 @@ export const useFileTransfer = (roomId: string | null) => {
 					);
 				}
 			}
+            
 		};
 
 		return () => {

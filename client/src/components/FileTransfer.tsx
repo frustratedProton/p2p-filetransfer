@@ -3,6 +3,7 @@ import FileInput from './FileInput';
 import ProgressBar from './ProgressBar';
 import DownloadLink from './DownloadLink';
 import { useFileTransfer } from '../hooks/useFileTransfer';
+import { generateRoomId } from '../utils/roomId';
 
 type Props = {
 	roomId: string | null;
@@ -37,7 +38,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 
 		let targetRoom = roomId;
 		if (!targetRoom) {
-			targetRoom = Math.random().toString(36).substring(2, 8);
+			targetRoom = generateRoomId();
 			onRoomCreated(targetRoom);
 		}
 
@@ -99,12 +100,20 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 					<p className="text-xs text-zinc-600 mt-2">
 						The other user cancelled or closed the tab.
 					</p>
-					<button
-						onClick={handleCompletion}
-						className="mt-6 px-5 py-2 bg-cyan-400 text-zinc-950 text-sm font-medium rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
-					>
-						Start New Transfer
-					</button>
+					<div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
+						<button
+							onClick={handleDisconnect}
+							className="px-5 py-2 bg-zinc-700 text-zinc-100 text-sm font-medium rounded-md hover:bg-zinc-600 transition-colors duration-150 active:scale-[0.98]"
+						>
+							Go Home
+						</button>
+						<button
+							onClick={handleCompletion}
+							className="px-5 py-2 bg-cyan-400 text-zinc-950 text-sm font-medium rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
+						>
+							Start New Transfer
+						</button>
+					</div>
 				</div>
 			)}
 
@@ -175,7 +184,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 								onClick={handleDisconnect}
 								className="px-6 py-2 text-sm font-medium text-zinc-100 bg-zinc-700 rounded-md hover:bg-zinc-600 transition-colors duration-150 active:scale-[0.98]"
 							>
-								Disconnect
+								Go Home
 							</button>
 							<button
 								onClick={handleCompletion}
