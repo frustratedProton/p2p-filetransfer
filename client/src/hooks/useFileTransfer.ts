@@ -62,6 +62,12 @@ export const useFileTransfer = (roomId: string | null) => {
 	const roomIdRef = useRef(roomId);
 	const queueRef = useRef<File[]>([]);
 
+	const completedFilesRef = useRef<
+		Array<{ url: string; info: { name: string; size: number } }>
+	>([]);
+
+	const lastDirectionRef = useRef<'send' | 'receive' | null>(null);
+
 	useEffect(() => {
 		roomIdRef.current = roomId;
 	}, [roomId]);
@@ -106,6 +112,11 @@ export const useFileTransfer = (roomId: string | null) => {
 		setRecvSpeed(0);
 		setSendETA(null);
 		setRecvETA(null);
+
+		completedFilesRef.current.forEach((f) => {
+			if (f.url) URL.revokeObjectURL(f.url);
+		});
+		completedFilesRef.current = [];
 		setCompletedFiles([]);
 
 		queueRef.current = [];
@@ -123,7 +134,16 @@ export const useFileTransfer = (roomId: string | null) => {
 		incomingFileInfo.current = null;
 		recvBuffer.current = [];
 		recvSize.current = 0;
+		lastDirectionRef.current = null;
 		setLastDirection(null);
+	};
+
+	const addCompletedFile = (file: {
+		url: string;
+		info: { name: string; size: number };
+	}) => {
+		completedFilesRef.current = [...completedFilesRef.current, file];
+		setCompletedFiles([...completedFilesRef.current]);
 	};
 
 	const processQueue = () => {
@@ -136,7 +156,8 @@ export const useFileTransfer = (roomId: string | null) => {
 		}
 
 		if (!isTransferring.current && queueRef.current.length === 0) {
-			if (sendMaxRef.current > 0 || recvMaxRef.current > 0) {
+			const didSomething = completedFilesRef.current.length > 0;
+			if (didSomething) {
 				setStatus('completed');
 				sendStartTime.current = null;
 				recvStartTime.current = null;
@@ -149,12 +170,9 @@ export const useFileTransfer = (roomId: string | null) => {
 	};
 
 	const onReceiveMessage = (event: MessageEvent) => {
-		if (!recvStartTime.current) {
-			recvStartTime.current = now();
-		}
-
 		if (typeof event.data === 'string') {
 			const data = JSON.parse(event.data);
+
 			if (data.type === 'metadata') {
 				isTransferring.current = true;
 				recvBuffer.current = [];
@@ -164,12 +182,15 @@ export const useFileTransfer = (roomId: string | null) => {
 				setRecvETA(null);
 				recvStartTime.current = now();
 
-				incomingFileInfo.current = data;
+				incomingFileInfo.current = { name: data.name, size: data.size };
 				setRecvMax(data.size);
+				recvMaxRef.current = data.size;
 				setStatus('receiving');
+				lastDirectionRef.current = 'receive';
 				setLastDirection('receive');
 				return;
 			}
+
 			if (data.type === 'batch-end') {
 				isTransferring.current = false;
 				recvStartTime.current = null;
@@ -181,20 +202,21 @@ export const useFileTransfer = (roomId: string | null) => {
 					recvBuffer.current = [];
 					recvSize.current = 0;
 					const url = URL.createObjectURL(blob);
-					setCompletedFiles((prev) => [
-						...prev,
-						{ url, info: incomingFileInfo.current },
-					]);
+					const fileInfo = incomingFileInfo.current;
 					incomingFileInfo.current = null;
+					addCompletedFile({ url, info: fileInfo });
 				}
-
-				processQueue();
+				setTimeout(processQueue, 0);
 				return;
 			}
 		}
 
-		recvBuffer.current.push(event.data);
-		recvSize.current += event.data.byteLength;
+		if (!recvStartTime.current) {
+			recvStartTime.current = now();
+		}
+
+		recvBuffer.current.push(event.data as ArrayBuffer);
+		recvSize.current += (event.data as ArrayBuffer).byteLength;
 		setRecvProg(recvSize.current);
 	};
 
@@ -213,11 +235,13 @@ export const useFileTransfer = (roomId: string | null) => {
 		offset.current = 0;
 		setSendProg(0);
 		setSendMax(file.size);
+		sendMaxRef.current = file.size;
 		setSendSpeed(0);
 		setSendETA(null);
 		sendStartTime.current = now();
 		isTransferring.current = true;
 		setStatus('sending');
+		lastDirectionRef.current = 'send';
 		setLastDirection('send');
 
 		if (!dataChannel.current || dataChannel.current.readyState !== 'open') {
@@ -241,6 +265,7 @@ export const useFileTransfer = (roomId: string | null) => {
 			dataChannel.current.send(result as ArrayBuffer);
 			offset.current += (result as ArrayBuffer).byteLength;
 			setSendProg(offset.current);
+			sendProgRef.current = offset.current;
 
 			if (offset.current < file.size) {
 				if (dataChannel.current.bufferedAmount <= HIGH_WATER_MARK) {
@@ -253,13 +278,10 @@ export const useFileTransfer = (roomId: string | null) => {
 				setSendSpeed(0);
 				setSendETA(null);
 
-				setCompletedFiles((prev) => [
-					...prev,
-					{
-						url: '',
-						info: { name: file.name, size: file.size },
-					},
-				]);
+				addCompletedFile({
+					url: '',
+					info: { name: file.name, size: file.size },
+				});
 
 				processQueue();
 			}
@@ -308,7 +330,9 @@ export const useFileTransfer = (roomId: string | null) => {
 		isPCOfferer.current = offerer;
 		cleanupConnection();
 		setStatus('connecting');
-		pc.current = new RTCPeerConnection();
+		pc.current = new RTCPeerConnection({
+			iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+		});
 
 		pc.current.onicecandidate = (event) => {
 			if (event.candidate) {
@@ -372,7 +396,6 @@ export const useFileTransfer = (roomId: string | null) => {
 			if (data.type === 'offer') {
 				isPCOfferer.current = false;
 				await establishConnection(false);
-
 				await pc.current?.setRemoteDescription(data.offer);
 				const answer = await pc.current!.createAnswer();
 				await pc.current!.setLocalDescription(answer);
@@ -453,8 +476,7 @@ export const useFileTransfer = (roomId: string | null) => {
 			!dataChannel.current;
 
 		if (needsConnection) {
-			const iAmOfferer = !roomIdRef.current;
-			isPCOfferer.current = iAmOfferer;
+			isPCOfferer.current = true;
 
 			if (socket.current?.readyState === WebSocket.OPEN) {
 				socket.current.send(
@@ -462,7 +484,6 @@ export const useFileTransfer = (roomId: string | null) => {
 				);
 			}
 			setStatus('waiting-for-peer');
-
 			queueRef.current.unshift(firstFile);
 		} else {
 			if (!isTransferring.current) {
@@ -500,7 +521,7 @@ export const useFileTransfer = (roomId: string | null) => {
 		recvMax,
 		completedFiles,
 		totalFiles,
-        lastDirection,
+		lastDirection,
 		startSend,
 		resetTransfer,
 		clearStatus,
