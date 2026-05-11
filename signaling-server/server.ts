@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 
 type SignalingMessage = {
-	type: 'join' | 'offer' | 'answer' | 'candidate';
+	type: 'join' | 'offer' | 'answer' | 'candidate' | 'leave' | 'signal-abort';
 	room?: string;
 	offer?: RTCSessionDescriptionInit;
 	answer?: RTCSessionDescriptionInit;
@@ -11,6 +11,33 @@ type SignalingMessage = {
 const wss = new WebSocketServer({ port: 3000 });
 
 const rooms = new Map<string, Set<WebSocket>>();
+
+function leaveRoom(ws: WebSocket & { roomId?: string }, notify: boolean) {
+	const roomId = ws.roomId;
+	if (!roomId || !rooms.has(roomId)) return;
+
+	const roomClients = rooms.get(roomId)!;
+	roomClients.delete(ws);
+	ws.roomId = undefined;
+
+	if (notify) {
+		const leaveMsg = JSON.stringify({ type: 'leave' });
+		for (const client of roomClients) {
+			if (client.readyState === WebSocket.OPEN) {
+				client.send(leaveMsg);
+			}
+		}
+	}
+
+	if (roomClients.size === 0) {
+		rooms.delete(roomId);
+		console.log(`Room ${roomId} emptied and removed`);
+	} else {
+		console.log(
+			`Client left room ${roomId} (Remaining: ${roomClients.size})`,
+		);
+	}
+}
 
 wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 	console.log('client connected');
@@ -29,6 +56,10 @@ wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 			if (!roomId || typeof roomId !== 'string') {
 				ws.send(JSON.stringify({ error: 'Invalid room ID' }));
 				return;
+			}
+
+			if (ws.roomId && ws.roomId !== roomId) {
+				leaveRoom(ws, true);
 			}
 
 			ws.roomId = roomId;
@@ -51,6 +82,11 @@ wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 			return;
 		}
 
+		if (data.type === 'leave') {
+			leaveRoom(ws, true);
+			return;
+		}
+
 		if (!ws.roomId || !rooms.has(ws.roomId)) {
 			console.log('Message ignored: client not in room');
 			return;
@@ -67,22 +103,7 @@ wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 
 	ws.on('close', () => {
 		console.log('client disconnected');
-		if (ws.roomId && rooms.has(ws.roomId)) {
-			const roomClients = rooms.get(ws.roomId)!;
-			roomClients?.delete(ws);
-
-			const leaveMsg = JSON.stringify({ type: 'leave' });
-			for (const client of roomClients) {
-				if (client.readyState === WebSocket.OPEN) {
-					client.send(leaveMsg);
-				}
-			}
-
-			if (roomClients.size === 0) {
-				rooms.delete(ws.roomId);
-				console.log(`Room ${ws.roomId} emptied and removed`);
-			}
-		}
+		leaveRoom(ws, true);
 	});
 
 	ws.on('error', (error) => {
@@ -90,4 +111,4 @@ wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 	});
 });
 
-console.log('Singaling server running on ws://localhost:3000');
+console.log('Signaling server running on ws://localhost:3000');

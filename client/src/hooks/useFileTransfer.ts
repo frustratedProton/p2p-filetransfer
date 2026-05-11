@@ -16,23 +16,28 @@ export type TransferStatus =
 	| 'cancelled'
 	| 'peer-cancelled';
 
+export type CompletedFile = {
+	url: string;
+	info: { name: string; size: number };
+	direction: 'sent' | 'received';
+};
+
 export const useFileTransfer = (roomId: string | null) => {
 	const [status, setStatus] = useState<TransferStatus>('idle');
-	const [sendProg, setSendProg] = useState<number>(0);
-	const [recvProg, setRecvProg] = useState<number>(0);
-	const [sendMax, setSendMax] = useState<number>(0);
-	const [recvMax, setRecvMax] = useState<number>(0);
-	const [sendSpeed, setSendSpeed] = useState<number>(0);
-	const [recvSpeed, setRecvSpeed] = useState<number>(0);
+	const [sendProg, setSendProg] = useState(0);
+	const [recvProg, setRecvProg] = useState(0);
+	const [sendMax, setSendMax] = useState(0);
+	const [recvMax, setRecvMax] = useState(0);
+	const [sendSpeed, setSendSpeed] = useState(0);
+	const [recvSpeed, setRecvSpeed] = useState(0);
 	const [sendETA, setSendETA] = useState<number | null>(null);
 	const [recvETA, setRecvETA] = useState<number | null>(null);
-	const [completedFiles, setCompletedFiles] = useState<
-		Array<{ url: string; info: { name: string; size: number } }>
-	>([]);
-	const [totalFiles, setTotalFiles] = useState<number>(0);
+	const [totalFiles, setTotalFiles] = useState(0);
 	const [lastDirection, setLastDirection] = useState<
 		'send' | 'receive' | null
 	>(null);
+	const [receivedFiles, setReceivedFiles] = useState<CompletedFile[]>([]);
+	const receivedFilesRef = useRef<CompletedFile[]>([]);
 
 	const pc = useRef<RTCPeerConnection | null>(null);
 	const dataChannel = useRef<RTCDataChannel | null>(null);
@@ -40,7 +45,7 @@ export const useFileTransfer = (roomId: string | null) => {
 	const socket = useRef<WebSocket | null>(null);
 
 	const recvBuffer = useRef<ArrayBuffer[]>([]);
-	const recvSize = useRef<number>(0);
+	const recvSize = useRef(0);
 	const incomingFileInfo = useRef<{ name: string; size: number } | null>(
 		null,
 	);
@@ -53,20 +58,16 @@ export const useFileTransfer = (roomId: string | null) => {
 	const sendMaxRef = useRef(0);
 	const recvMaxRef = useRef(0);
 
-	const isTransferring = useRef<boolean>(false);
-	const isPCOfferer = useRef<boolean>(false);
+	const isTransferring = useRef(false);
+	const isPCOfferer = useRef(false);
 
 	const currentFile = useRef<File | null>(null);
-	const offset = useRef<number>(0);
+	const offset = useRef(0);
 
 	const roomIdRef = useRef(roomId);
 	const queueRef = useRef<File[]>([]);
-
-	const completedFilesRef = useRef<
-		Array<{ url: string; info: { name: string; size: number } }>
-	>([]);
-
-	const lastDirectionRef = useRef<'send' | 'receive' | null>(null);
+	const sentCountRef = useRef(0);
+	const expectedSendCountRef = useRef(0);
 
 	useEffect(() => {
 		roomIdRef.current = roomId;
@@ -86,15 +87,14 @@ export const useFileTransfer = (roomId: string | null) => {
 			fileReader.current.onerror = null;
 			fileReader.current = null;
 		}
-
 		if (dataChannel.current) {
 			dataChannel.current.onbufferedamountlow = null;
 			dataChannel.current.onmessage = null;
 			dataChannel.current.onerror = null;
+			dataChannel.current.onopen = null;
 			dataChannel.current.close();
 			dataChannel.current = null;
 		}
-
 		if (pc.current) {
 			pc.current.onicecandidate = null;
 			pc.current.ondatachannel = null;
@@ -113,12 +113,6 @@ export const useFileTransfer = (roomId: string | null) => {
 		setSendETA(null);
 		setRecvETA(null);
 
-		completedFilesRef.current.forEach((f) => {
-			if (f.url) URL.revokeObjectURL(f.url);
-		});
-		completedFilesRef.current = [];
-		setCompletedFiles([]);
-
 		queueRef.current = [];
 		setTotalFiles(0);
 		sendProgRef.current = 0;
@@ -128,22 +122,20 @@ export const useFileTransfer = (roomId: string | null) => {
 		sendStartTime.current = null;
 		recvStartTime.current = null;
 		isTransferring.current = false;
+		sentCountRef.current = 0;
+		expectedSendCountRef.current = 0;
 
 		currentFile.current = null;
 		offset.current = 0;
 		incomingFileInfo.current = null;
 		recvBuffer.current = [];
 		recvSize.current = 0;
-		lastDirectionRef.current = null;
 		setLastDirection(null);
 	};
 
-	const addCompletedFile = (file: {
-		url: string;
-		info: { name: string; size: number };
-	}) => {
-		completedFilesRef.current = [...completedFilesRef.current, file];
-		setCompletedFiles([...completedFilesRef.current]);
+	const addReceivedFile = (file: CompletedFile) => {
+		receivedFilesRef.current = [...receivedFilesRef.current, file];
+		setReceivedFiles([...receivedFilesRef.current]);
 	};
 
 	const processQueue = () => {
@@ -156,16 +148,13 @@ export const useFileTransfer = (roomId: string | null) => {
 		}
 
 		if (!isTransferring.current && queueRef.current.length === 0) {
-			const didSomething = completedFilesRef.current.length > 0;
-			if (didSomething) {
-				setStatus('completed');
-				sendStartTime.current = null;
-				recvStartTime.current = null;
-				setSendSpeed(0);
-				setRecvSpeed(0);
-				setSendETA(null);
-				setRecvETA(null);
-			}
+			setStatus('completed');
+			sendStartTime.current = null;
+			recvStartTime.current = null;
+			setSendSpeed(0);
+			setRecvSpeed(0);
+			setSendETA(null);
+			setRecvETA(null);
 		}
 	};
 
@@ -186,7 +175,6 @@ export const useFileTransfer = (roomId: string | null) => {
 				setRecvMax(data.size);
 				recvMaxRef.current = data.size;
 				setStatus('receiving');
-				lastDirectionRef.current = 'receive';
 				setLastDirection('receive');
 				return;
 			}
@@ -204,8 +192,14 @@ export const useFileTransfer = (roomId: string | null) => {
 					const url = URL.createObjectURL(blob);
 					const fileInfo = incomingFileInfo.current;
 					incomingFileInfo.current = null;
-					addCompletedFile({ url, info: fileInfo });
+
+					addReceivedFile({
+						url,
+						info: fileInfo,
+						direction: 'received',
+					});
 				}
+
 				setTimeout(processQueue, 0);
 				return;
 			}
@@ -241,7 +235,6 @@ export const useFileTransfer = (roomId: string | null) => {
 		sendStartTime.current = now();
 		isTransferring.current = true;
 		setStatus('sending');
-		lastDirectionRef.current = 'send';
 		setLastDirection('send');
 
 		if (!dataChannel.current || dataChannel.current.readyState !== 'open') {
@@ -277,11 +270,7 @@ export const useFileTransfer = (roomId: string | null) => {
 				sendStartTime.current = null;
 				setSendSpeed(0);
 				setSendETA(null);
-
-				addCompletedFile({
-					url: '',
-					info: { name: file.name, size: file.size },
-				});
+				sentCountRef.current += 1;
 
 				processQueue();
 			}
@@ -348,7 +337,6 @@ export const useFileTransfer = (roomId: string | null) => {
 		if (offerer) {
 			const channel = pc.current.createDataChannel('fileTransfer');
 			setupChannel(channel);
-
 			const offer = await pc.current.createOffer();
 			await pc.current.setLocalDescription(offer);
 			socket.current?.send(JSON.stringify({ type: 'offer', offer }));
@@ -434,10 +422,10 @@ export const useFileTransfer = (roomId: string | null) => {
 					(performance.now() - sendStartTime.current) / 1000;
 				const speed = sendProgRef.current / elapsed;
 				setSendSpeed(speed);
-
 				if (sendMaxRef.current > 0 && speed > 0) {
-					const remaining = sendMaxRef.current - sendProgRef.current;
-					setSendETA(remaining / speed);
+					setSendETA(
+						(sendMaxRef.current - sendProgRef.current) / speed,
+					);
 				}
 			}
 
@@ -446,10 +434,10 @@ export const useFileTransfer = (roomId: string | null) => {
 					(performance.now() - recvStartTime.current) / 1000;
 				const speed = recvProgRef.current / elapsed;
 				setRecvSpeed(speed);
-
 				if (recvMaxRef.current > 0 && speed > 0) {
-					const remaining = recvMaxRef.current - recvProgRef.current;
-					setRecvETA(remaining / speed);
+					setRecvETA(
+						(recvMaxRef.current - recvProgRef.current) / speed,
+					);
 				}
 			}
 		}, 500);
@@ -469,6 +457,8 @@ export const useFileTransfer = (roomId: string | null) => {
 		const [firstFile, ...rest] = files;
 		queueRef.current = rest;
 		setTotalFiles(files.length);
+		expectedSendCountRef.current = files.length;
+		sentCountRef.current = 0;
 
 		const needsConnection =
 			!pc.current ||
@@ -502,9 +492,18 @@ export const useFileTransfer = (roomId: string | null) => {
 	};
 
 	const disconnect = () => {
-		socket.current?.send(JSON.stringify({ type: 'leave' }));
+		if (socket.current?.readyState === WebSocket.OPEN) {
+			socket.current.send(JSON.stringify({ type: 'leave' }));
+		}
 		cleanupConnection();
 		resetStats();
+
+		receivedFilesRef.current.forEach((f) => {
+			if (f.url) URL.revokeObjectURL(f.url);
+		});
+		receivedFilesRef.current = [];
+		setReceivedFiles([]);
+
 		setStatus('idle');
 	};
 
@@ -519,7 +518,7 @@ export const useFileTransfer = (roomId: string | null) => {
 		recvProg,
 		sendMax,
 		recvMax,
-		completedFiles,
+		receivedFiles,
 		totalFiles,
 		lastDirection,
 		startSend,

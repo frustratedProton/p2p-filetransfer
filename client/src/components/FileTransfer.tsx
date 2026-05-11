@@ -12,7 +12,6 @@ type Props = {
 
 const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 	const [files, setFiles] = useState<File[]>([]);
-	// const [isSender, setIsSender] = useState(false);
 
 	const {
 		status,
@@ -20,7 +19,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		recvProg,
 		sendMax,
 		recvMax,
-		completedFiles,
+		receivedFiles,
 		totalFiles,
 		startSend,
 		resetTransfer,
@@ -40,7 +39,6 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		if (!targetRoom) {
 			targetRoom = Math.random().toString(36).substring(2, 8);
 			onRoomCreated(targetRoom);
-			// setIsSender(true);
 		}
 
 		startSend(files, targetRoom);
@@ -53,25 +51,37 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 	};
 
 	const handleCompletion = () => {
-		clearStatus(); // Keeps WebRTC alive for bidirectional sending!
+		clearStatus();
 		setFiles([]);
 	};
 
 	const handleDisconnect = () => {
 		disconnect();
 		onCancel();
-        setFiles([]);
+		setFiles([]);
 	};
 
-	const isSendView = lastDirection === 'send'; // ADD THIS
+	const isSendView = lastDirection === 'send';
 
 	const currentFileIndex =
 		status === 'sending' || status === 'receiving'
-			? completedFiles.length + 1
-			: completedFiles.length;
+			? totalFiles - (status === 'sending' ? 0 : 0)
+			: 0;
+	void currentFileIndex;
 
 	return (
 		<section className="w-full flex flex-col gap-6">
+			{receivedFiles.length > 0 && (
+				<div className="flex flex-col gap-2">
+					<p className="text-xs text-zinc-500 uppercase tracking-widest font-mono">
+						Received Files
+					</p>
+					{receivedFiles.map((f, i) => (
+						<DownloadLink key={i} url={f.url} info={f.info} />
+					))}
+				</div>
+			)}
+
 			{status === 'cancelled' && (
 				<div className="text-center p-8 bg-zinc-900 border border-zinc-800 rounded-lg">
 					<p className="text-sm font-semibold text-zinc-400 uppercase tracking-widest">
@@ -136,7 +146,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 
 					{totalFiles > 1 && status !== 'completed' && (
 						<p className="text-xs text-zinc-500 font-mono tracking-wider">
-							File {currentFileIndex} of {totalFiles}
+							Transferring {totalFiles} files
 						</p>
 					)}
 
@@ -160,32 +170,20 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 					)}
 
 					{status === 'completed' && (
-						<>
-							{completedFiles.map((f, i) => (
-								<DownloadLink
-									key={i}
-									url={f.url}
-									info={f.info}
-								/>
-							))}
-
-							{/* REPLACED BUTTONS HERE */}
-							<div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
-								<button
-									onClick={handleDisconnect}
-									className="px-6 py-2 text-sm font-medium text-zinc-100 bg-zinc-700 rounded-md hover:bg-zinc-600 transition-colors duration-150 active:scale-[0.98]"
-								>
-									Disconnect
-								</button>
-
-								<button
-									onClick={handleCompletion}
-									className="px-6 py-2 text-sm font-medium text-zinc-950 bg-green-400 rounded-md hover:bg-green-300 transition-colors duration-150 active:scale-[0.98]"
-								>
-									Send Another
-								</button>
-							</div>
-						</>
+						<div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-2">
+							<button
+								onClick={handleDisconnect}
+								className="px-6 py-2 text-sm font-medium text-zinc-100 bg-zinc-700 rounded-md hover:bg-zinc-600 transition-colors duration-150 active:scale-[0.98]"
+							>
+								Disconnect
+							</button>
+							<button
+								onClick={handleCompletion}
+								className="px-6 py-2 text-sm font-medium text-zinc-950 bg-green-400 rounded-md hover:bg-green-300 transition-colors duration-150 active:scale-[0.98]"
+							>
+								Send Another
+							</button>
+						</div>
 					)}
 				</div>
 			)}
