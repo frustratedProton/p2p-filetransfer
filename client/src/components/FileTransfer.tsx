@@ -31,7 +31,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		recvSpeed,
 		sendETA,
 		recvETA,
-	} = useFileTransfer(roomId);
+	} = useFileTransfer(roomId, onRoomCreated);
 
 	const handleShare = () => {
 		if (files.length === 0) return;

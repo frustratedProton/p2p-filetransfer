@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { generateRoomId } from '../utils/roomId';
 
 const CHUNK_SIZE = 16384;
 const HIGH_WATER_MARK = 5 * 1024 * 1024;
@@ -22,7 +23,10 @@ export type CompletedFile = {
 	direction: 'sent' | 'received';
 };
 
-export const useFileTransfer = (roomId: string | null) => {
+export const useFileTransfer = (
+	roomId: string | null,
+	onRoomIdChange?: (newRoomId: string) => void,
+) => {
 	const [status, setStatus] = useState<TransferStatus>('idle');
 	const [sendProg, setSendProg] = useState(0);
 	const [recvProg, setRecvProg] = useState(0);
@@ -406,7 +410,14 @@ export const useFileTransfer = (roomId: string | null) => {
 					);
 				}
 			}
-            
+			if (data.type === 'room-full') {
+				const newId = generateRoomId();
+				socket.current?.send(
+					JSON.stringify({ type: 'join', room: newId }),
+				);
+				onRoomIdChange?.(newId);
+				return;
+			}
 		};
 
 		return () => {

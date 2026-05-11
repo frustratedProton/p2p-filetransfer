@@ -57,21 +57,21 @@ wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 				ws.send(JSON.stringify({ error: 'Invalid room ID' }));
 				return;
 			}
-            
-			if (rooms.get(roomId)!.size >= 2) {
-				ws.send(JSON.stringify({ type: 'room-full' }));
-				return;
-			}
 
 			if (ws.roomId && ws.roomId !== roomId) {
 				leaveRoom(ws, true);
 			}
 
-			ws.roomId = roomId;
-
 			if (!rooms.has(roomId)) {
 				rooms.set(roomId, new Set());
 			}
+
+			if (rooms.get(roomId)!.size >= 2) {
+				ws.send(JSON.stringify({ type: 'room-full' }));
+				return;
+			}
+
+			ws.roomId = roomId;
 			rooms.get(roomId)!.add(ws);
 
 			const joinMsg = JSON.stringify({ type: 'peer-joined' });
