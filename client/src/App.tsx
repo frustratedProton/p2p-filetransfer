@@ -43,61 +43,56 @@ function App() {
 	const currentUrl = window.location.href;
 
 	return (
-		<div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-4">
-			<div className="w-full max-w-md">
-				<div className="text-center mb-10">
-					<h1 className="text-4xl font-bold uppercase tracking-widest text-zinc-400">
-						P2P Transfer
+		<div className="min-h-screen flex flex-col items-center justify-center p-6">
+			<div className="w-full max-w-sm">
+				<div className="mb-12">
+					<h1 className="text-2xl font-semibold text-zinc-100 tracking-tight">
+						p2p transfer
 					</h1>
-
-					{roomId && (
-						<div className="mt-6 flex flex-col items-center gap-4">
-							{showQR && (
-								<div className="p-4 bg-white rounded-xl shadow-lg">
-									<QRCodeSVG
-										value={currentUrl}
-										size={180}
-										bgColor="#ffffff"
-										fgColor="#09090b"
-										level="M"
-									/>
-								</div>
-							)}
-
-							<div className="w-full bg-zinc-900 border border-zinc-800 px-4 py-3 rounded-lg">
-								<p className="text-xs text-zinc-500 uppercase tracking-widest mb-2">
-									Share this link
-								</p>
-								<p className="text-sm font-mono text-zinc-300 break-all">
-									{currentUrl}
-								</p>
-							</div>
-
-							<div className="flex items-center gap-3">
-								<button
-									onClick={copyLink}
-									className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 active:scale-[0.98] ${
-										copied
-											? 'bg-green-400/10 text-green-400'
-											: 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100'
-									}`}
-								>
-									{copied ? '✓ Copied' : 'Copy Link'}
-								</button>
-								<button
-									onClick={() => setShowQR((v) => !v)}
-									className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 active:scale-[0.98] ${
-										showQR
-											? 'bg-cyan-400/10 text-cyan-400'
-											: 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100'
-									}`}
-								>
-									{showQR ? 'Hide QR' : 'Show QR'}
-								</button>
-							</div>
-						</div>
-					)}
+					<p className="text-sm text-zinc-500 mt-1">
+						browser-to-browser. no server.
+					</p>
 				</div>
+
+				{roomId && (
+					<div className="mb-10 flex flex-col gap-5">
+						{/* QR */}
+						{showQR && (
+							<div className="self-start p-3 bg-white rounded-lg">
+								<QRCodeSVG
+									value={currentUrl}
+									size={148}
+									bgColor="#ffffff"
+									fgColor="#09090b"
+									level="M"
+								/>
+							</div>
+						)}
+
+						<p className="text-sm text-zinc-400 break-all leading-relaxed">
+							{currentUrl}
+						</p>
+
+						<div className="flex items-center gap-5">
+							<button
+								onClick={copyLink}
+								className={`text-sm font-medium transition-colors duration-150 ${
+									copied
+										? 'text-green-400'
+										: 'text-cyan-500 hover:text-cyan-400'
+								}`}
+							>
+								{copied ? '✓ copied' : 'copy link'}
+							</button>
+							<button
+								onClick={() => setShowQR((v) => !v)}
+								className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
+							>
+								{showQR ? 'hide qr' : 'show qr'}
+							</button>
+						</div>
+					</div>
+				)}
 
 				<FileTransfer
 					roomId={roomId}

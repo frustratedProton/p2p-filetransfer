@@ -15,37 +15,19 @@ const DownloadLink = ({ url, info }: Props) => {
 	if (!url || !info) return null;
 
 	return (
-		<div className="w-full p-4 bg-zinc-900 border border-zinc-800 rounded-lg flex items-center justify-between">
-			<div className="flex items-center gap-3 overflow-hidden mr-4">
-				<svg
-					className="w-5 h-5 text-cyan-400 shrink-0"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={1.5}
-						d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-				<div className="overflow-hidden">
-					<p className="text-sm font-medium text-zinc-300 truncate">
-						{info.name}
-					</p>
-					<p className="text-xs text-zinc-600 font-mono">
-						{formatFileSize(info.size)}
-					</p>
-				</div>
+		<div className="flex items-center justify-between gap-4 py-2 border-b border-zinc-800 last:border-0">
+			<div className="overflow-hidden">
+				<p className="text-sm text-zinc-300 truncate">{info.name}</p>
+				<p className="text-xs text-zinc-600 mt-0.5">
+					{formatFileSize(info.size)}
+				</p>
 			</div>
-
 			<a
 				href={url}
 				download={info.name}
-				className="shrink-0 px-4 py-1.5 text-xs font-medium text-zinc-950 bg-cyan-400 rounded-md hover:bg-cyan-300 transition-colors duration-150 active:scale-[0.98]"
+				className="shrink-0 text-sm text-cyan-400 hover:text-cyan-300 transition-colors duration-150"
 			>
-				Save
+				save
 			</a>
 		</div>
 	);
