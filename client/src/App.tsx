@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import FileTransfer from './components/FileTransfer';
 
 const parseRoomIdFromHash = (): string | null => {
-	const hash = window.location.hash.slice(1); 
+	const hash = window.location.hash.slice(1);
 	if (hash && /^[a-z]+-[a-z]+$/.test(hash)) {
 		return hash;
 	}
@@ -12,6 +13,7 @@ const parseRoomIdFromHash = (): string | null => {
 function App() {
 	const [roomId, setRoomId] = useState<string | null>(parseRoomIdFromHash);
 	const [copied, setCopied] = useState(false);
+	const [showQR, setShowQR] = useState(true);
 
 	useEffect(() => {
 		const handleHashChange = () => {
@@ -29,6 +31,7 @@ function App() {
 	const handleCancel = () => {
 		window.history.pushState({}, '', window.location.pathname);
 		setRoomId(null);
+		setShowQR(true);
 	};
 
 	const copyLink = () => {
@@ -36,6 +39,8 @@ function App() {
 		setCopied(true);
 		setTimeout(() => setCopied(false), 1500);
 	};
+
+	const currentUrl = window.location.href;
 
 	return (
 		<div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-4">
@@ -46,20 +51,48 @@ function App() {
 					</h1>
 
 					{roomId && (
-						<div className="mt-6 flex items-center justify-center">
-							<div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full">
-								<span className="text-sm font-mono font-semibold tracking-wider text-zinc-300">
-									{roomId}
-								</span>
+						<div className="mt-6 flex flex-col items-center gap-4">
+							{showQR && (
+								<div className="p-4 bg-white rounded-xl shadow-lg">
+									<QRCodeSVG
+										value={currentUrl}
+										size={180}
+										bgColor="#ffffff"
+										fgColor="#09090b"
+										level="M"
+									/>
+								</div>
+							)}
+
+							<div className="w-full bg-zinc-900 border border-zinc-800 px-4 py-3 rounded-lg">
+								<p className="text-xs text-zinc-500 uppercase tracking-widest mb-2">
+									Share this link
+								</p>
+								<p className="text-sm font-mono text-zinc-300 break-all">
+									{currentUrl}
+								</p>
+							</div>
+
+							<div className="flex items-center gap-3">
 								<button
 									onClick={copyLink}
-									className={`text-xs font-medium ml-2 transition-colors duration-150 ${
+									className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 active:scale-[0.98] ${
 										copied
-											? 'text-green-400'
-											: 'text-cyan-400 hover:text-cyan-300'
+											? 'bg-green-400/10 text-green-400'
+											: 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100'
 									}`}
 								>
-									{copied ? '✓ Copied' : 'Copy'}
+									{copied ? '✓ Copied' : 'Copy Link'}
+								</button>
+								<button
+									onClick={() => setShowQR((v) => !v)}
+									className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 active:scale-[0.98] ${
+										showQR
+											? 'bg-cyan-400/10 text-cyan-400'
+											: 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100'
+									}`}
+								>
+									{showQR ? 'Hide QR' : 'Show QR'}
 								</button>
 							</div>
 						</div>
