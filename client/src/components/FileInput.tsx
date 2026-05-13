@@ -103,7 +103,7 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 	return (
 		<div className="flex flex-col gap-5">
 			<label
-				className={`flex flex-col items-center justify-center w-full py-16 border border-dashed rounded-lg transition-all duration-150 cursor-pointer select-none ${
+				className={`flex flex-col items-center justify-center w-full py-16 sm:py-16 border border-dashed rounded-lg transition-all duration-150 cursor-pointer select-none ${
 					dragActive
 						? 'border-cyan-500 bg-cyan-950/40 shadow-[inset_0_0_40px_rgba(6,182,212,0.05)]'
 						: 'border-zinc-700 bg-zinc-800/20 hover:border-zinc-500 hover:bg-zinc-800/40'
@@ -133,12 +133,12 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 						</p>
 					</div>
 				) : (
-					<div className="text-center pointer-events-none">
+					<div className="text-center pointer-events-none px-6">
 						<p className="text-base leading-snug text-zinc-200">
 							drop files here
 						</p>
 						<p className="text-sm leading-snug text-zinc-500 mt-1">
-							or click to browse
+							tap or click to browse
 						</p>
 					</div>
 				)}
@@ -156,7 +156,7 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 			<button
 				type="button"
 				onClick={() => folderInputRef.current?.click()}
-				className="self-start cursor-pointer text-sm leading-snug text-zinc-400 hover:text-zinc-200 transition-colors duration-150 cursor-pointer underline underline-offset-4 decoration-zinc-700 hover:decoration-zinc-500"
+				className="self-start text-sm leading-snug text-zinc-400 hover:text-zinc-200 transition-colors duration-150 cursor-pointer underline underline-offset-4 decoration-zinc-700 hover:decoration-zinc-500"
 			>
 				browse folder instead
 			</button>

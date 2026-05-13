@@ -15,7 +15,8 @@ export type TransferStatus =
 	| 'receiving'
 	| 'completed'
 	| 'cancelled'
-	| 'peer-cancelled';
+	| 'peer-cancelled'
+	| 'connection-failed';
 
 export type CompletedFile = {
 	url: string;
@@ -73,6 +74,10 @@ export const useFileTransfer = (
 	const sentCountRef = useRef(0);
 	const expectedSendCountRef = useRef(0);
 
+	const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	);
+
 	useEffect(() => {
 		roomIdRef.current = roomId;
 	}, [roomId]);
@@ -85,6 +90,11 @@ export const useFileTransfer = (
 	}, [sendProg, recvProg, sendMax, recvMax]);
 
 	const cleanupConnection = () => {
+		if (connectionTimeoutRef.current) {
+			clearTimeout(connectionTimeoutRef.current);
+			connectionTimeoutRef.current = null;
+		}
+
 		if (fileReader.current) {
 			fileReader.current.abort();
 			fileReader.current.onload = null;
@@ -108,6 +118,11 @@ export const useFileTransfer = (
 	};
 
 	const resetStats = () => {
+		if (connectionTimeoutRef.current) {
+			clearTimeout(connectionTimeoutRef.current);
+			connectionTimeoutRef.current = null;
+		}
+
 		setSendProg(0);
 		setRecvProg(0);
 		setSendMax(0);
@@ -299,6 +314,10 @@ export const useFileTransfer = (
 		};
 
 		channel.onopen = () => {
+			if (connectionTimeoutRef.current) {
+				clearTimeout(connectionTimeoutRef.current);
+				connectionTimeoutRef.current = null;
+			}
 			setStatus('idle');
 			if (queueRef.current.length > 0 && !isTransferring.current) {
 				const next = queueRef.current.shift();
@@ -352,7 +371,7 @@ export const useFileTransfer = (
 	};
 
 	useEffect(() => {
-		socket.current = new WebSocket('ws://localhost:3000');
+		socket.current = new WebSocket(import.meta.env.VITE_SIGNALING_URL);
 
 		socket.current.onopen = () => {
 			if (roomIdRef.current) {
@@ -487,6 +506,15 @@ export const useFileTransfer = (
 			}
 			setStatus('waiting-for-peer');
 			queueRef.current.unshift(firstFile);
+
+			// start timeout
+			connectionTimeoutRef.current = setTimeout(() => {
+				if (status === 'waiting-for-peer') {
+					cleanupConnection();
+					resetStats();
+					setStatus('connection-failed');
+				}
+			}, 30_000);
 		} else {
 			if (!isTransferring.current) {
 				startSendFile(firstFile);

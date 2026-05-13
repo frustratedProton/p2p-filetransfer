@@ -177,6 +177,33 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 					)}
 				</div>
 			)}
+
+			{status === 'connection-failed' && (
+				<div className="flex flex-col gap-4">
+					<div>
+						<p className="text-sm text-zinc-300 font-medium">
+							connection failed
+						</p>
+						<p className="text-xs text-zinc-500 mt-1">
+							no peer joined after 30 seconds.
+						</p>
+					</div>
+					<div className="flex items-center gap-5">
+						<button
+							onClick={handleDisconnect}
+							className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors duration-150 cursor-pointer"
+						>
+							go home
+						</button>
+						<button
+							onClick={handleCancel}
+							className="text-sm text-cyan-500 hover:text-cyan-400 transition-colors duration-150 cursor-pointer"
+						>
+							try again
+						</button>
+					</div>
+				</div>
+			)}
 		</section>
 	);
 };
