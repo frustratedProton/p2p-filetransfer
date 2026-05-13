@@ -66,7 +66,6 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		<section className="w-full flex flex-col gap-8">
 			{receivedFiles.length > 0 && (
 				<div className="flex flex-col gap-2">
-					<p className="text-xs text-zinc-500 mb-1">received</p>
 					{receivedFiles.map((f, i) => (
 						<DownloadLink key={i} url={f.url} info={f.info} />
 					))}
@@ -90,13 +89,13 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 					<div className="flex items-center gap-5">
 						<button
 							onClick={handleDisconnect}
-							className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
+							className="text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
 						>
 							go home
 						</button>
 						<button
 							onClick={handleCompletion}
-							className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors duration-150"
+							className="text-sm cursor-pointer text-cyan-400 hover:text-cyan-300 transition-colors duration-150"
 						>
 							new transfer
 						</button>
@@ -123,7 +122,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 					</p>
 					<button
 						onClick={handleCancel}
-						className="self-start text-sm text-zinc-500 hover:text-zinc-300 transition-colors duration-150 mt-1"
+						className="self-start cursor-pointer text-sm text-zinc-500 hover:text-zinc-300 transition-colors duration-150 mt-1"
 					>
 						cancel
 					</button>
@@ -150,17 +149,17 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 
 					{status === 'completed' && (
 						<div className="flex flex-col gap-4">
-							<p className="text-sm text-zinc-400">done.</p>
+							<p className="text-base text-zinc-400">done.</p>
 							<div className="flex items-center gap-5">
 								<button
 									onClick={handleDisconnect}
-									className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
+									className="text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
 								>
 									go home
 								</button>
 								<button
 									onClick={handleCompletion}
-									className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors duration-150"
+									className="text-sm cursor-pointer text-cyan-400 hover:text-cyan-300 transition-colors duration-150"
 								>
 									send another
 								</button>
@@ -171,7 +170,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 					{status !== 'completed' && (
 						<button
 							onClick={handleCancel}
-							className="self-start text-sm text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
+							className="self-start text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
 						>
 							cancel
 						</button>

@@ -45,11 +45,14 @@ function App() {
 	return (
 		<div className="min-h-screen flex flex-col items-center justify-center p-6">
 			<div className="w-full max-w-sm">
-				<div className="mb-12">
-					<h1 className="text-2xl font-semibold text-zinc-100 tracking-tight">
-						p2p transfer
+				<div className="mb-16">
+					<h1 className="text-7xl tracking-tight leading-none">
+						<span className="font-extralight text-zinc-300">
+							relay
+						</span>
+						<span className="text-cyan-500">.</span>
 					</h1>
-					<p className="text-sm text-zinc-500 mt-1">
+					<p className="text-base text-zinc-500 mt-5">
 						browser-to-browser. no server.
 					</p>
 				</div>
@@ -69,14 +72,14 @@ function App() {
 							</div>
 						)}
 
-						<p className="text-sm text-zinc-400 break-all leading-relaxed">
+						<p className="text-sm text-zinc-300 font-mono break-all leading-relaxed px-3 py-2 bg-zinc-800/40 rounded border border-zinc-700/50">
 							{currentUrl}
 						</p>
 
 						<div className="flex items-center gap-5">
 							<button
 								onClick={copyLink}
-								className={`text-sm font-medium transition-colors duration-150 ${
+								className={`text-sm cursor-pointer font-medium transition-colors duration-150 ${
 									copied
 										? 'text-green-400'
 										: 'text-cyan-500 hover:text-cyan-400'
@@ -86,7 +89,7 @@ function App() {
 							</button>
 							<button
 								onClick={() => setShowQR((v) => !v)}
-								className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
+								className="text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
 							>
 								{showQR ? 'hide qr' : 'show qr'}
 							</button>

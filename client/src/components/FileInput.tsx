@@ -103,10 +103,10 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 	return (
 		<div className="flex flex-col gap-5">
 			<label
-				className={`flex flex-col items-center justify-center w-full py-16 border border-dashed rounded-lg transition-colors duration-150 cursor-pointer select-none ${
+				className={`flex flex-col items-center justify-center w-full py-16 border border-dashed rounded-lg transition-all duration-150 cursor-pointer select-none ${
 					dragActive
-						? 'border-cyan-600 bg-cyan-950/30'
-						: 'border-zinc-800 hover:border-zinc-700'
+						? 'border-cyan-500 bg-cyan-950/40 shadow-[inset_0_0_40px_rgba(6,182,212,0.05)]'
+						: 'border-zinc-700 bg-zinc-800/20 hover:border-zinc-500 hover:bg-zinc-800/40'
 				}`}
 				onDragOver={handleDragOver}
 				onDragEnter={handleDragEnter}
@@ -123,19 +123,21 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 
 				{files.length > 0 ? (
 					<div className="text-center px-6 pointer-events-none">
-						<p className="text-sm text-zinc-300">
+						<p className="text-base leading-snug text-zinc-100">
 							{files.length === 1
 								? files[0].name
 								: `${files.length} files`}
 						</p>
-						<p className="text-xs text-zinc-600 mt-1">
+						<p className="text-sm leading-snug text-zinc-400 mt-1">
 							{formatFileSize(totalSize)}
 						</p>
 					</div>
 				) : (
 					<div className="text-center pointer-events-none">
-						<p className="text-sm text-zinc-400">drop files here</p>
-						<p className="text-xs text-zinc-600 mt-1">
+						<p className="text-base leading-snug text-zinc-200">
+							drop files here
+						</p>
+						<p className="text-sm leading-snug text-zinc-500 mt-1">
 							or click to browse
 						</p>
 					</div>
@@ -154,7 +156,7 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 			<button
 				type="button"
 				onClick={() => folderInputRef.current?.click()}
-				className="self-start text-xs text-zinc-600 hover:text-zinc-400 transition-colors duration-150"
+				className="self-start cursor-pointer text-sm leading-snug text-zinc-400 hover:text-zinc-200 transition-colors duration-150 cursor-pointer underline underline-offset-4 decoration-zinc-700 hover:decoration-zinc-500"
 			>
 				browse folder instead
 			</button>
@@ -162,7 +164,7 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 			{files.length > 0 && !isWaiting && (
 				<button
 					onClick={onShare}
-					className="w-full py-3 text-sm font-medium text-zinc-950 bg-cyan-500 rounded-lg hover:bg-cyan-400 transition-colors duration-150 active:scale-[0.98]"
+					className="w-full py-3 text-base cursor-pointer leading-snug font-medium text-zinc-950 bg-cyan-500 rounded-lg hover:bg-cyan-400 transition-colors duration-150 active:scale-[0.98]"
 				>
 					send {files.length === 1 ? 'file' : `${files.length} files`}
 				</button>
