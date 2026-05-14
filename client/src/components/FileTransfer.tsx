@@ -31,6 +31,8 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		recvSpeed,
 		sendETA,
 		recvETA,
+		pauseTransfer,
+		resumeTransfer,
 	} = useFileTransfer(roomId, onRoomCreated);
 
 	const handleShare = () => {
@@ -131,7 +133,9 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 
 			{(status === 'sending' ||
 				status === 'receiving' ||
-				status === 'completed') && (
+				status === 'completed' ||
+				status === 'paused-send' ||
+				status === 'paused-recv') && (
 				<div className="flex flex-col gap-6">
 					{totalFiles > 1 && status !== 'completed' && (
 						<p className="text-xs text-zinc-500">
@@ -167,7 +171,34 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 						</div>
 					)}
 
-					{status !== 'completed' && (
+					{(status === 'sending' || status === 'paused-send') && (
+						<div className="flex items-center gap-5">
+							<button
+								onClick={
+									status === 'paused-send'
+										? resumeTransfer
+										: pauseTransfer
+								}
+								className="text-sm cursor-pointer text-cyan-500 hover:text-cyan-400 transition-colors duration-150"
+							>
+								{status === 'paused-send' ? 'resume' : 'pause'}
+							</button>
+							<button
+								onClick={handleCancel}
+								className="text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
+							>
+								cancel
+							</button>
+						</div>
+					)}
+
+					{status === 'paused-recv' && (
+						<p className="text-sm text-zinc-500">
+							sender paused the transfer
+						</p>
+					)}
+
+					{status === 'receiving' && (
 						<button
 							onClick={handleCancel}
 							className="self-start text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"

@@ -13,6 +13,8 @@ export type TransferStatus =
 	| 'connecting'
 	| 'sending'
 	| 'receiving'
+	| 'paused-send'
+	| 'paused-recv'
 	| 'completed'
 	| 'cancelled'
 	| 'peer-cancelled'
@@ -73,6 +75,8 @@ export const useFileTransfer = (
 	const queueRef = useRef<File[]>([]);
 	const sentCountRef = useRef(0);
 	const expectedSendCountRef = useRef(0);
+
+	const isPaused = useRef(false);
 
 	const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
 		null,
@@ -149,6 +153,7 @@ export const useFileTransfer = (
 		incomingFileInfo.current = null;
 		recvBuffer.current = [];
 		recvSize.current = 0;
+		isPaused.current = false;
 		setLastDirection(null);
 	};
 
@@ -222,6 +227,14 @@ export const useFileTransfer = (
 				setTimeout(processQueue, 0);
 				return;
 			}
+			if (data.typeof === 'trasfer-resume') {
+				setStatus('paused-recv');
+				return;
+			}
+			if (data.type === 'transfer-paused') {
+				setStatus('paused-recv');
+				return;
+			}
 		}
 
 		if (!recvStartTime.current) {
@@ -238,6 +251,7 @@ export const useFileTransfer = (
 		if (!file || !fileReader.current || fileReader.current.readyState === 1)
 			return;
 		if (offset.current >= file.size) return;
+		if (isPaused.current) return;
 
 		const slice = file.slice(offset.current, offset.current + CHUNK_SIZE);
 		fileReader.current.readAsArrayBuffer(slice);
@@ -307,6 +321,7 @@ export const useFileTransfer = (
 			if (
 				isTransferring.current &&
 				currentFile.current &&
+				!isPaused.current &&
 				offset.current < currentFile.current.size
 			) {
 				readSlice();
@@ -531,6 +546,26 @@ export const useFileTransfer = (
 		setStatus('cancelled');
 	};
 
+	const resumeTransfer = () => {
+		if (!isPaused.current) return;
+		isPaused.current = false;
+		setStatus('sending');
+		dataChannel.current?.send(JSON.stringify({ type: 'transfer-resume' }));
+		sendStartTime.current = now(); // restart the timer
+		sendProgRef.current = 0;
+		readSlice();
+	};
+
+	const pauseTransfer = () => {
+		if (!isTransferring.current || isPaused.current) return;
+		isPaused.current = true;
+		setStatus('paused-send');
+		dataChannel.current?.send(JSON.stringify({ type: 'transfer-pause' }));
+		sendStartTime.current = null; // halt the timer
+		setSendSpeed(0);
+		setSendETA(null);
+	};
+
 	const disconnect = () => {
 		if (socket.current?.readyState === WebSocket.OPEN) {
 			socket.current.send(JSON.stringify({ type: 'leave' }));
@@ -569,5 +604,7 @@ export const useFileTransfer = (
 		recvSpeed,
 		sendETA,
 		recvETA,
+		pauseTransfer,
+		resumeTransfer,
 	};
 };
