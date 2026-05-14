@@ -77,6 +77,8 @@ export const useFileTransfer = (
 	const expectedSendCountRef = useRef(0);
 
 	const isPaused = useRef(false);
+	// const pauseTransferRef = useRef<() => void>(() => {});
+	// const resumeTransferRef = useRef<() => void>(() => {});
 
 	const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
 		null,
@@ -227,8 +229,8 @@ export const useFileTransfer = (
 				setTimeout(processQueue, 0);
 				return;
 			}
-			if (data.type === 'trasfer-resume') {
-				setStatus('paused-recv');
+			if (data.type === 'transfer-resume') {
+				setStatus('receiving');
 				return;
 			}
 			if (data.type === 'transfer-paused') {
@@ -236,10 +238,31 @@ export const useFileTransfer = (
 				return;
 			}
 
-            // if (data.type === 'pause-req') {
-            //     pauseTransfer();
-            //     return;
-            // }
+			if (data.type === 'pause-req') {
+				if (!isTransferring.current || isPaused.current) return;
+				isPaused.current = true;
+				setStatus('paused-send');
+				dataChannel.current?.send(
+					JSON.stringify({ type: 'transfer-paused' }),
+				);
+				sendStartTime.current = null;
+				setSendSpeed(0);
+				setSendETA(null);
+				return;
+			}
+
+			if (data.type === 'resume-req') {
+				if (!isPaused.current) return;
+				isPaused.current = false;
+				setStatus('sending');
+				dataChannel.current?.send(
+					JSON.stringify({ type: 'transfer-resume' }),
+				);
+				sendStartTime.current = now();
+				// sendProgRef.current = 0;
+				readSlice();
+				return;
+			}
 		}
 
 		if (!recvStartTime.current) {
@@ -468,7 +491,9 @@ export const useFileTransfer = (
 
 	useEffect(() => {
 		const interval = setInterval(() => {
-			if (sendStartTime.current && sendProgRef.current > 0) {
+            const paused = status === 'paused-send' || status === 'paused-recv';
+
+			if (!paused && sendStartTime.current && sendProgRef.current > 0) {
 				const elapsed =
 					(performance.now() - sendStartTime.current) / 1000;
 				const speed = sendProgRef.current / elapsed;
@@ -480,7 +505,7 @@ export const useFileTransfer = (
 				}
 			}
 
-			if (recvStartTime.current && recvProgRef.current > 0) {
+			if (!paused && recvStartTime.current && recvProgRef.current > 0) {
 				const elapsed =
 					(performance.now() - recvStartTime.current) / 1000;
 				const speed = recvProgRef.current / elapsed;
@@ -494,7 +519,7 @@ export const useFileTransfer = (
 		}, 500);
 
 		return () => clearInterval(interval);
-	}, []);
+	}, [status]);
 
 	useEffect(() => {
 		if (roomId && socket.current?.readyState === WebSocket.OPEN) {
@@ -557,7 +582,7 @@ export const useFileTransfer = (
 		setStatus('sending');
 		dataChannel.current?.send(JSON.stringify({ type: 'transfer-resume' }));
 		sendStartTime.current = now(); // restart the timer
-		sendProgRef.current = 0;
+		// sendProgRef.current = 0;
 		readSlice();
 	};
 
@@ -592,6 +617,16 @@ export const useFileTransfer = (
 		setStatus('idle');
 	};
 
+	const requestPause = () => {
+		if (status === 'paused-recv') return;
+		dataChannel.current?.send(JSON.stringify({ type: 'pause-req' }));
+	};
+
+	const requestResume = () => {
+		if (status !== 'paused-recv') return;
+		dataChannel.current?.send(JSON.stringify({ type: 'resume-req' }));
+	};
+
 	return {
 		status,
 		sendProg,
@@ -611,5 +646,7 @@ export const useFileTransfer = (
 		recvETA,
 		pauseTransfer,
 		resumeTransfer,
+		requestPause,
+		requestResume,
 	};
 };

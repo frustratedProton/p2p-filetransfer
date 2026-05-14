@@ -33,6 +33,8 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		recvETA,
 		pauseTransfer,
 		resumeTransfer,
+		requestPause,
+		requestResume,
 	} = useFileTransfer(roomId, onRoomCreated);
 
 	const handleShare = () => {
@@ -49,6 +51,7 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		resetTransfer();
 		clearStatus();
 		setFiles([]);
+		onCancel();
 	};
 
 	const handleCompletion = () => {
@@ -63,6 +66,15 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 	};
 
 	const isSendView = lastDirection === 'send';
+	// console.log({
+	// 	status,
+	// 	lastDirection,
+	// 	isSendView,
+	// 	sendProg,
+	// 	sendMax,
+	// 	recvProg,
+	// 	recvMax,
+	// });
 
 	return (
 		<section className="w-full flex flex-col gap-8">
@@ -192,19 +204,38 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 						</div>
 					)}
 
-					{status === 'paused-recv' && (
-						<p className="text-sm text-zinc-500">
-							sender paused the transfer
-						</p>
+					{status === 'receiving' && (
+						<div className="flex items-center gap-5">
+							<button
+								onClick={requestPause}
+								className="text-sm cursor-pointer text-cyan-500 hover:text-cyan-400 transition-colors duration-150"
+							>
+								pause
+							</button>
+							<button
+								onClick={handleCancel}
+								className="text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
+							>
+								cancel
+							</button>
+						</div>
 					)}
 
-					{status === 'receiving' && (
-						<button
-							onClick={handleCancel}
-							className="self-start text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
-						>
-							cancel
-						</button>
+					{status === 'paused-recv' && (
+						<div className="flex items-center gap-5">
+							<button
+								onClick={requestResume}
+								className="text-sm cursor-pointer text-cyan-500 hover:text-cyan-400 transition-colors duration-150"
+							>
+								resume
+							</button>
+							<button
+								onClick={handleCancel}
+								className="text-sm cursor-pointer text-zinc-500 hover:text-zinc-300 transition-colors duration-150"
+							>
+								cancel
+							</button>
+						</div>
 					)}
 				</div>
 			)}
