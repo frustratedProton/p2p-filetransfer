@@ -227,7 +227,7 @@ export const useFileTransfer = (
 				setTimeout(processQueue, 0);
 				return;
 			}
-			if (data.typeof === 'trasfer-resume') {
+			if (data.type === 'trasfer-resume') {
 				setStatus('paused-recv');
 				return;
 			}
@@ -235,6 +235,11 @@ export const useFileTransfer = (
 				setStatus('paused-recv');
 				return;
 			}
+
+            // if (data.type === 'pause-req') {
+            //     pauseTransfer();
+            //     return;
+            // }
 		}
 
 		if (!recvStartTime.current) {

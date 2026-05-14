@@ -164,9 +164,9 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 			{files.length > 0 && !isWaiting && (
 				<button
 					onClick={onShare}
-					className="w-full py-3 text-base cursor-pointer leading-snug font-medium text-zinc-950 bg-cyan-500 rounded-lg hover:bg-cyan-400 transition-colors duration-150 active:scale-[0.98]"
+					className="text-base cursor-pointer font-semibold text-cyan-500 hover:text-cyan-400 transition-colors duration-150"
 				>
-					send {files.length === 1 ? 'file' : `${files.length} files`}
+					send {files.length === 1 ? 'file' : `${files.length} files`}.
 				</button>
 			)}
 		</div>
