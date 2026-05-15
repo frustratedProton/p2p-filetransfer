@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { useState, useEffect, lazy, Suspense } from 'react';
+
 import FileTransfer from './components/FileTransfer';
+
+const QRCodeSVG = lazy(() =>
+	import('qrcode.react').then((m) => ({ default: m.QRCodeSVG })),
+);
 
 const parseRoomIdFromHash = (): string | null => {
 	const hash = window.location.hash.slice(1);
-	if (hash && /^[a-z]+-[a-z]+$/.test(hash)) {
+	if (hash && /^[a-z]+-[a-z]+-[a-z]+$/.test(hash)) {
 		return hash;
 	}
 	return null;
 };
-
 function App() {
 	const [roomId, setRoomId] = useState<string | null>(parseRoomIdFromHash);
 	const [copied, setCopied] = useState(false);
@@ -59,17 +62,18 @@ function App() {
 
 				{roomId && (
 					<div className="mb-10 flex flex-col gap-5">
-						{/* QR */}
 						{showQR && (
-							<div className="self-start p-3 bg-white rounded-lg">
-								<QRCodeSVG
-									value={currentUrl}
-									size={148}
-									bgColor="#ffffff"
-									fgColor="#09090b"
-									level="M"
-								/>
-							</div>
+							<Suspense fallback={null}>
+								<div className="self-start p-3 bg-white rounded-lg">
+									<QRCodeSVG
+										value={currentUrl}
+										size={148}
+										bgColor="#ffffff"
+										fgColor="#09090b"
+										level="M"
+									/>
+								</div>
+							</Suspense>
 						)}
 
 						<p className="text-sm text-zinc-300 font-mono break-all leading-relaxed px-3 py-2 bg-zinc-800/40 rounded border border-zinc-700/50">

@@ -43,6 +43,13 @@ wss.on('connection', (ws: WebSocket & { roomId?: string }) => {
 	console.log('client connected');
 
 	ws.on('message', (message: Buffer) => {
+		if (message.length > 64 * 1024) {
+			ws.send(
+				JSON.stringify({ type: 'error', message: 'message too large' }),
+			);
+			return;
+		}
+
 		let data: SignalingMessage;
 		try {
 			data = JSON.parse(message.toString());

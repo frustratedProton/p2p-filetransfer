@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { generateRoomId } from '../utils/roomId';
 
-const CHUNK_SIZE = 16384;
-const HIGH_WATER_MARK = 5 * 1024 * 1024;
-const LOW_WATER_MARK = 1 * 1024 * 1024;
+const CHUNK_SIZE = 256 * 1024;
+const HIGH_WATER_MARK = 8 * 1024 * 1024;
+const LOW_WATER_MARK = 2 * 1024 * 1024;
 
 const now = () => performance.now();
 
