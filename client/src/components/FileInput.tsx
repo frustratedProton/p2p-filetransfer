@@ -111,6 +111,15 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 		e.target.value = '';
 	};
 
+	const handleRemove = (file: File) => {
+		const updated = files.filter((f) => f !== file);
+		setFiles(updated);
+		if (updated.length === 0) {
+			setListOpen(false);
+			setShowAll(false);
+		}
+	};
+
 	const totalSize = files.reduce((acc, f) => acc + f.size, 0);
 	const preview = files.slice(0, PREVIEW_COUNT);
 	const overflow = files.length - PREVIEW_COUNT;
@@ -173,15 +182,24 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 						<div className="flex flex-col mt-1">
 							{(showAll ? files : preview).map((f, i) => (
 								<div
-									key={i}
-									className="flex items-center justify-between py-1.5 border-b border-zinc-800 last:border-0"
+									key={`${f.name}-${f.size}-${i}`}
+									className="flex items-center justify-between py-1.5 border-b border-zinc-800 last:border-0 group"
 								>
 									<p className="text-sm text-zinc-300 truncate flex-1 mr-4">
 										{f.name}
 									</p>
-									<p className="text-xs text-zinc-600 shrink-0">
-										{formatFileSize(f.size)}
-									</p>
+									<div className="flex items-center gap-3 shrink-0">
+										<p className="text-xs text-zinc-600">
+											{formatFileSize(f.size)}
+										</p>
+										<button
+											type="button"
+											onClick={() => handleRemove(f)}
+											className="text-zinc-700 hover:text-zinc-300 transition-colors duration-150 cursor-pointer opacity-0 group-hover:opacity-100"
+										>
+											{'\u0078'}
+										</button>
+									</div>
 								</div>
 							))}
 
