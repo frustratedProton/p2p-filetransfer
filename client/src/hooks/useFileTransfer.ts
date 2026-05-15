@@ -44,6 +44,9 @@ export const useFileTransfer = (
 		'send' | 'receive' | null
 	>(null);
 	const [receivedFiles, setReceivedFiles] = useState<CompletedFile[]>([]);
+	const [wsReady, setWsReady] = useState(false);
+	const [wsError, setWsError] = useState(false);
+
 	const receivedFilesRef = useRef<CompletedFile[]>([]);
 
 	const pc = useRef<RTCPeerConnection | null>(null);
@@ -417,11 +420,22 @@ export const useFileTransfer = (
 		socket.current = new WebSocket(import.meta.env.VITE_SIGNALING_URL);
 
 		socket.current.onopen = () => {
+			setWsReady(true);
+			setWsError(false);
 			if (roomIdRef.current) {
 				socket.current?.send(
 					JSON.stringify({ type: 'join', room: roomIdRef.current }),
 				);
 			}
+		};
+
+		socket.current.onclose = () => {
+			setWsReady(false);
+		};
+
+		socket.current.onerror = () => {
+			setWsReady(false);
+			setWsError(true);
 		};
 
 		socket.current.onmessage = async (event) => {
@@ -491,7 +505,7 @@ export const useFileTransfer = (
 
 	useEffect(() => {
 		const interval = setInterval(() => {
-            const paused = status === 'paused-send' || status === 'paused-recv';
+			const paused = status === 'paused-send' || status === 'paused-recv';
 
 			if (!paused && sendStartTime.current && sendProgRef.current > 0) {
 				const elapsed =
@@ -648,5 +662,7 @@ export const useFileTransfer = (
 		resumeTransfer,
 		requestPause,
 		requestResume,
+		wsReady,
+		wsError,
 	};
 };

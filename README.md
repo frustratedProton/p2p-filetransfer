@@ -42,3 +42,6 @@ server runs on `ws://localhost:3000`, client on `http://localhost:5173`
   <img src="./client/public/p1.webp" alt="Preview 1" width="420" />
   <img src="./client/public/p2.webp" alt="Preview 2" width="420" />
 </p>
+
+
+> I have not properly tested this on a mobile yet. ＞︿＜

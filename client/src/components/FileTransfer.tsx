@@ -35,6 +35,8 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 		resumeTransfer,
 		requestPause,
 		requestResume,
+		wsReady,
+		wsError,
 	} = useFileTransfer(roomId, onRoomCreated);
 
 	const handleShare = () => {
@@ -118,12 +120,37 @@ const FileTransfer = ({ roomId, onRoomCreated, onCancel }: Props) => {
 			)}
 
 			{status === 'idle' && (
-				<FileInput
-					files={files}
-					setFiles={setFiles}
-					onShare={handleShare}
-					isWaiting={false}
-				/>
+				<>
+					{wsError && (
+						<div className="flex flex-col gap-2">
+							<p className="text-sm text-zinc-300">
+								could not reach server
+							</p>
+							<p className="text-xs text-zinc-500">
+								check your connection or try again later.
+							</p>
+							<button
+								onClick={() => window.location.reload()}
+								className="self-start text-sm text-cyan-500 hover:text-cyan-400 transition-colors duration-150 cursor-pointer mt-1"
+							>
+								retry
+							</button>
+						</div>
+					)}
+					{!wsReady && !wsError && (
+						<p className="text-sm text-zinc-500">
+							connecting to server...
+						</p>
+					)}
+					{wsReady && (
+						<FileInput
+							files={files}
+							setFiles={setFiles}
+							onShare={handleShare}
+							isWaiting={false}
+						/>
+					)}
+				</>
 			)}
 
 			{status === 'waiting-for-peer' && (

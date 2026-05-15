@@ -237,6 +237,7 @@ const NOUNS = [
 
 export function generateRoomId(): string {
 	const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-	const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-	return `${adj}-${noun}`;
+	const noun1 = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+	const noun2 = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+	return `${adj}-${noun1}-${noun2}`;
 }
