@@ -36,8 +36,13 @@ const formatFileSize = (bytes: number) => {
 	return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 };
 
+const PREVIEW_COUNT = 5;
+
 const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 	const [dragActive, setDragActive] = useState(false);
+	const [listOpen, setListOpen] = useState(true);
+	const [showAll, setShowAll] = useState(false);
+
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const folderInputRef = useRef<HTMLInputElement>(null);
 
@@ -88,22 +93,32 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 		}
 
 		setTimeout(() => {
-			if (collectedFiles.length > 0) setFiles(collectedFiles);
+			if (collectedFiles.length > 0) {
+				setFiles(collectedFiles);
+				setListOpen(true);
+				setShowAll(false);
+			}
 		}, 200);
 	};
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const selected = e.target.files ? Array.from(e.target.files) : [];
-		if (selected.length > 0) setFiles(selected);
+		if (selected.length > 0) {
+			setFiles(selected);
+			setListOpen(true);
+			setShowAll(false);
+		}
 		e.target.value = '';
 	};
 
 	const totalSize = files.reduce((acc, f) => acc + f.size, 0);
+	const preview = files.slice(0, PREVIEW_COUNT);
+	const overflow = files.length - PREVIEW_COUNT;
 
 	return (
 		<div className="flex flex-col gap-5">
 			<label
-				className={`flex flex-col items-center justify-center w-full py-16 sm:py-16 border border-dashed rounded-lg transition-all duration-150 cursor-pointer select-none ${
+				className={`flex flex-col items-center justify-center w-full py-16 border border-dashed rounded-lg transition-all duration-150 cursor-pointer select-none ${
 					dragActive
 						? 'border-cyan-500 bg-cyan-950/40 shadow-[inset_0_0_40px_rgba(6,182,212,0.05)]'
 						: 'border-zinc-700 bg-zinc-800/20 hover:border-zinc-500 hover:bg-zinc-800/40'
@@ -128,12 +143,12 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 								? files[0].name
 								: `${files.length} files`}
 						</p>
-						<p className="text-sm leading-snug text-zinc-400 mt-1">
-							{formatFileSize(totalSize)}
+						<p className="text-xs text-zinc-500 mt-1">
+							{formatFileSize(totalSize)} total
 						</p>
 					</div>
 				) : (
-					<div className="text-center pointer-events-none px-6">
+					<div className="text-center pointer-events-none">
 						<p className="text-base leading-snug text-zinc-200">
 							drop files here
 						</p>
@@ -143,6 +158,56 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 					</div>
 				)}
 			</label>
+
+			{files.length > 1 && (
+				<div className="flex flex-col gap-1">
+					<button
+						type="button"
+						onClick={() => setListOpen((v) => !v)}
+						className="self-start text-sm text-zinc-400 hover:text-zinc-200 transition-colors duration-150 cursor-pointer"
+					>
+						{listOpen ? 'hide files ↑' : 'show files ↓'}
+					</button>
+
+					{listOpen && (
+						<div className="flex flex-col mt-1">
+							{(showAll ? files : preview).map((f, i) => (
+								<div
+									key={i}
+									className="flex items-center justify-between py-1.5 border-b border-zinc-800 last:border-0"
+								>
+									<p className="text-sm text-zinc-300 truncate flex-1 mr-4">
+										{f.name}
+									</p>
+									<p className="text-xs text-zinc-600 shrink-0">
+										{formatFileSize(f.size)}
+									</p>
+								</div>
+							))}
+
+							{overflow > 0 && !showAll && (
+								<button
+									type="button"
+									onClick={() => setShowAll(true)}
+									className="self-start text-xs text-zinc-500 hover:text-zinc-300 transition-colors duration-150 cursor-pointer mt-2"
+								>
+									and {overflow} more ↓
+								</button>
+							)}
+
+							{showAll && overflow > 0 && (
+								<button
+									type="button"
+									onClick={() => setShowAll(false)}
+									className="self-start text-xs text-zinc-500 hover:text-zinc-300 transition-colors duration-150 cursor-pointer mt-2"
+								>
+									show less ↑
+								</button>
+							)}
+						</div>
+					)}
+				</div>
+			)}
 
 			<input
 				type="file"
@@ -166,7 +231,8 @@ const FileInput = ({ files, setFiles, onShare, isWaiting }: Props) => {
 					onClick={onShare}
 					className="text-base cursor-pointer font-semibold text-cyan-500 hover:text-cyan-400 transition-colors duration-150"
 				>
-					send {files.length === 1 ? 'file' : `${files.length} files`}.
+					send {files.length === 1 ? 'file' : `${files.length} files`}{' '}
+					→
 				</button>
 			)}
 		</div>
